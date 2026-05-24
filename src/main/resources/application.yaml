@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: vlad-data-receiver
+  datasource:
+    url: jdbc:mysql://localhost:3306/vlad_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+logging:
+  level:
+    ru.vlad: INFO
+    org.springframework.jdbc: DEBUG
+  charset:
+    console: UTF-8
+
+insert-operdays-scheduler: 0 0 7 27 * ?
