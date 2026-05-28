@@ -15,14 +15,9 @@ public class OperationalDayScheduler {
 
     @Scheduled(cron = "${insert-operdays-scheduler}")
     public void generateOperationalDays() {
-        log.info("=== ЗАПУСК OperationalDayScheduler ===");
-        try {
-            String result = operationalDayService.insertOperDays();
-            log.info("Результат выполнения функции: {}", result);
-        } catch (Exception e) {
-            log.error("Ошибка в работе OperationalDayScheduler", e);
-        } finally {
-            log.info("=== ЗАВЕРШЕНИЕ OperationalDayScheduler ===");
-        }
+        long startTime = System.currentTimeMillis();
+        log.info("Начало выполнения функции заполнения опердней на следующий месяц");
+        operationalDayService.insertOperDays();
+        log.info("Обработка операционных дней выполнена за {} ms", System.currentTimeMillis() - startTime);
     }
 }

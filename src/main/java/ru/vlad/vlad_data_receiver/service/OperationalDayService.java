@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.repository.OperationalDayRepository;
+import ru.vlad.vlad_data_receiver.entity.OperationalDay;
 
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -16,55 +16,54 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OperationalDayService {
 
-    private final OperationalDayRepository repository;
+    private final CRUDService crudService;
 
     @Transactional
-    public String insertOperDays() {
-        log.info("Начало выполнения функции заполнения опердней на следующий месяц");
-        long startTime = System.currentTimeMillis();
+    public void insertOperDays() {
+        LocalDate firstDayOfNextMonth = LocalDate.now()
+                .with(TemporalAdjusters.firstDayOfNextMonth());
+        LocalDate lastDayOfNextMonth = firstDayOfNextMonth
+                .with(TemporalAdjusters.lastDayOfMonth());
 
-        LocalDate nextMonthDate = LocalDate.now().plusMonths(1);
-        LocalDate startDay = nextMonthDate.with(TemporalAdjusters.firstDayOfMonth());
-        LocalDate endDay = nextMonthDate.with(TemporalAdjusters.lastDayOfMonth());
-
-        int totalDaysInNextMonth = nextMonthDate.lengthOfMonth();
-        int existingDaysCount = repository.countDaysInPeriod(startDay, endDay);
+        int totalDaysInNextMonth = lastDayOfNextMonth.getDayOfMonth();
+        int existingDaysCount = crudService.countByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
 
         try {
             if (existingDaysCount == 0) {
-                log.info("Опердни на следующий месяц ({}) отсутствуют. Начинаем заполнение...", nextMonthDate.getMonth());
-                fillOperationalDays(startDay, endDay);
-                return String.format("Успешно заполнены опердни на весь следующий месяц с %s по %s.", startDay, endDay);
+                log.debug("Опердни на следующий месяц ({}) отсутствуют. Начинаем заполнение...", firstDayOfNextMonth.getMonth());
+                fillOperationalDays(firstDayOfNextMonth, lastDayOfNextMonth);
+                log.info("Успешно заполнены опердни на весь следующий месяц с {} по {}.", firstDayOfNextMonth, lastDayOfNextMonth);
+            } else if (existingDaysCount == totalDaysInNextMonth) {
+                log.warn("Внимание, генерация пропущена: все опердни на следующий месяц ({}) уже присутствуют в базе данных!", firstDayOfNextMonth.getMonth());
+            } else {
+                log.warn("Опердни на следующий месяц есть, но не на весь месяц (найдено {} из {}). Перезапускаем заполнение...",
+                        existingDaysCount, totalDaysInNextMonth);
+
+                crudService.deleteByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
+                log.info("Частичные опердни удалены.");
+
+                fillOperationalDays(firstDayOfNextMonth, lastDayOfNextMonth);
+                log.info("Заново заполнен весь следующий месяц с {} по {}.", firstDayOfNextMonth, lastDayOfNextMonth);
             }
-            if (existingDaysCount == totalDaysInNextMonth) {
-                log.warn("Внимание: Все опердни на следующий месяц ({}) уже присутствуют в базе данных!", nextMonthDate.getMonth());
-                return "Генерация пропущена: все дни уже существуют.";
-            }
-            log.warn("Опердни на следующий месяц есть, но не на весь месяц (найдено {} из {}). Перезапускаем заполнение...",
-                    existingDaysCount, totalDaysInNextMonth);
-
-            repository.deleteDaysInPeriod(startDay, endDay);
-
-            fillOperationalDays(startDay, endDay);
-
-            return String.format("Частичные опердни удалены. Заново заполнен весь следующий месяц с %s по %s.", startDay, endDay);
-        } catch (Exception e) {
-            throw new RuntimeException("Ошибка выполнения функции заполнения опердней на следующий месяц: " + e.getMessage(), e);
-        } finally {
-            log.info("Обработка операционных дней выполнена за {} ms", System.currentTimeMillis() - startTime);
+        } catch (RuntimeException e) {
+            log.error("Ошибка выполнения функции заполнения опердней на следующий месяц: ", e);
         }
     }
 
-    private void fillOperationalDays(LocalDate start, LocalDate end) {
-        List<LocalDate> datesToInsert = new ArrayList<>();
-        LocalDate loopDate = start;
+    private void fillOperationalDays(LocalDate firstDayOfNextMonth, LocalDate lastDayOfNextMonth) {
+        List<OperationalDay> daysToInsert = new ArrayList<>();
+        LocalDate loopDate = firstDayOfNextMonth;
 
-        while (!loopDate.isAfter(end)) {
-            datesToInsert.add(loopDate);
+        while (!loopDate.isAfter(lastDayOfNextMonth)) {
+            OperationalDay operationalDay = OperationalDay.builder()
+                    .date(loopDate)
+                    .stateId(1L)
+                    .build();
+            daysToInsert.add(operationalDay);
             loopDate = loopDate.plusDays(1);
         }
 
-        repository.saveAll(datesToInsert, 1);
-        log.info("Выполнена пакетная вставка {} опердней.", datesToInsert.size());
+        crudService.saveAll(daysToInsert);
+        log.debug("Выполнена пакетная вставка {} опердней.", daysToInsert.size());
     }
 }
