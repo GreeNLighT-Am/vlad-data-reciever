@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDate;
@@ -17,14 +16,11 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "operational_day", schema = "vlad_db")
-public class OperationalDay {
+public class OperationalDayEntity {
     @Id
-    @Column("id")
     private Long id;
 
-    @Column("date")
     private LocalDate date;
 
-    @Column("state_id")
     private Long stateId;
 }

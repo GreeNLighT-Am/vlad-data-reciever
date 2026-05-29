@@ -16,8 +16,9 @@ public class OperationalDayScheduler {
     @Scheduled(cron = "${insert-operdays-scheduler}")
     public void generateOperationalDays() {
         long startTime = System.currentTimeMillis();
-        log.info("Начало выполнения функции заполнения опердней на следующий месяц");
+        log.info("Начало выполнения функции создания операционных дней на следующий месяц");
         operationalDayService.insertOperDays();
-        log.info("Обработка операционных дней выполнена за {} ms", System.currentTimeMillis() - startTime);
+        log.info("Функция создания операционных дней выполнена за {} секунд",
+                String.format("%.3f", (System.currentTimeMillis() - startTime) / 1000.0));
     }
 }

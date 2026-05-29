@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.entity.OperationalDay;
+import ru.vlad.vlad_data_receiver.entity.OperationalDayEntity;
 
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -16,7 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OperationalDayService {
 
-    private final CRUDService crudService;
+    private final OperationalDayCrudService crudService;
 
     @Transactional
     public void insertOperDays() {
@@ -32,7 +32,6 @@ public class OperationalDayService {
             if (existingDaysCount == 0) {
                 log.debug("Опердни на следующий месяц ({}) отсутствуют. Начинаем заполнение...", firstDayOfNextMonth.getMonth());
                 fillOperationalDays(firstDayOfNextMonth, lastDayOfNextMonth);
-                log.info("Успешно заполнены опердни на весь следующий месяц с {} по {}.", firstDayOfNextMonth, lastDayOfNextMonth);
             } else if (existingDaysCount == totalDaysInNextMonth) {
                 log.warn("Внимание, генерация пропущена: все опердни на следующий месяц ({}) уже присутствуют в базе данных!", firstDayOfNextMonth.getMonth());
             } else {
@@ -40,10 +39,8 @@ public class OperationalDayService {
                         existingDaysCount, totalDaysInNextMonth);
 
                 crudService.deleteByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
-                log.info("Частичные опердни удалены.");
 
                 fillOperationalDays(firstDayOfNextMonth, lastDayOfNextMonth);
-                log.info("Заново заполнен весь следующий месяц с {} по {}.", firstDayOfNextMonth, lastDayOfNextMonth);
             }
         } catch (RuntimeException e) {
             log.error("Ошибка выполнения функции заполнения опердней на следующий месяц: ", e);
@@ -51,11 +48,11 @@ public class OperationalDayService {
     }
 
     private void fillOperationalDays(LocalDate firstDayOfNextMonth, LocalDate lastDayOfNextMonth) {
-        List<OperationalDay> daysToInsert = new ArrayList<>();
+        List<OperationalDayEntity> daysToInsert = new ArrayList<>();
         LocalDate loopDate = firstDayOfNextMonth;
 
         while (!loopDate.isAfter(lastDayOfNextMonth)) {
-            OperationalDay operationalDay = OperationalDay.builder()
+            OperationalDayEntity operationalDay = OperationalDayEntity.builder()
                     .date(loopDate)
                     .stateId(1L)
                     .build();
@@ -64,6 +61,6 @@ public class OperationalDayService {
         }
 
         crudService.saveAll(daysToInsert);
-        log.debug("Выполнена пакетная вставка {} опердней.", daysToInsert.size());
+        log.info("Успешно заполнены опердни на весь следующий месяц с {} по {}.", firstDayOfNextMonth, lastDayOfNextMonth);
     }
 }
