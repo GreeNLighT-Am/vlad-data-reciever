@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<schema xmlns="http://www.w3.org/2001/XMLSchema"
+        targetNamespace="http://ru.vlad/documents"
+        xmlns:tns="http://ru.vlad/documents" elementFormDefault="qualified">
+
+    <element name="Document_Input_Request">
+        <complexType>
+            <sequence>
+                <element name="Document" maxOccurs="unbounded" type="tns:document"/>
+            </sequence>
+            <attribute name="ID" type="string" use="required"/>
+            <attribute name="TimeStamp" type="dateTime" use="required"/>
+            <attribute name="blockNum" type="int" use="required"/>
+            <attribute name="totalDocs" type="int" use="required"/>
+            <attribute name="dataSet" type="string" use="required"/>
+            <attribute name="odDocType" type="string" use="required"/>
+        </complexType>
+    </element>
+
+    <element name="MO_Data">
+        <complexType>
+            <sequence>
+                <element name="Entries" type="tns:entries"/>
+                <element name="SourceSystemHistory" type="tns:sourceSystemHistory" minOccurs="0"/>
+                <element name="ParentDocs" type="tns:parentDocs" minOccurs="0"/>
+            </sequence>
+            <attribute name="TimeStamp" type="dateTime" use="required"/>
+        </complexType>
+    </element>
+
+    <complexType name="document">
+        <sequence>
+            <element name="DocumentCard" type="tns:documentCard"/>
+            <element name="DocumentBody" type="tns:documentBody"/>
+        </sequence>
+        <attribute name="SeqN" type="int" use="required"/>
+    </complexType>
+
+    <complexType name="documentCard">
+        <sequence>
+            <element name="VariableAttribute" minOccurs="0" maxOccurs="unbounded" type="tns:documentAttribute"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="documentAttribute">
+        <attribute name="IfPrimaryKey" type="boolean" use="required"/>
+        <attribute name="AttributeCode" type="string" use="required"/>
+        <attribute name="AttributeValue" type="anySimpleType"/>
+    </complexType>
+
+    <complexType name="documentBody">
+        <sequence>
+            <element name="Content" maxOccurs="unbounded" type="tns:content"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="content">
+        <sequence>
+            <element name="Data" type="base64Binary"/>
+            <element name="Url" type="string" minOccurs="0"/>
+            <element name="AccountingEntry" type="tns:accountingEntry" minOccurs="0"/>
+            <element name="DocumentSigns" type="tns:documentSigns" minOccurs="0"/>
+        </sequence>
+        <attribute name="Format" type="string" use="required"/>
+    </complexType>
+
+    <complexType name="accountingEntry">
+        <sequence>
+            <element name="Entries" type="tns:entries"/>
+            <element name="SourceSystemHistory" type="tns:sourceSystemHistory" minOccurs="0"/>
+            <element name="ParentDocs" type="tns:parentDocs" minOccurs="0"/>
+        </sequence>
+        <attribute name="TimeStamp" type="dateTime" use="required"/>
+    </complexType>
+
+    <complexType name="entries">
+        <sequence>
+            <element name="Entry" maxOccurs="unbounded" type="tns:entry"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="entry">
+        <sequence>
+            <element name="EntryNumber" type="int"/>
+            <element name="AccountNumberDT" type="string"/>
+            <element name="AccountNumberKT" type="string"/>
+            <element name="EntrySum" type="tns:entrySum"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="entrySum">
+        <simpleContent>
+            <extension base="double">
+                <attribute name="Currency" type="int" use="required"/>
+            </extension>
+        </simpleContent>
+    </complexType>
+
+    <complexType name="sourceSystemHistory">
+        <sequence>
+            <element name="Action" maxOccurs="unbounded" type="tns:action"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="action">
+        <sequence>
+            <element name="ActionNumber" type="int"/>
+            <element name="Name" type="string"/>
+            <element name="Role" type="string"/>
+            <element name="Action" type="string"/>
+            <element name="Date" type="tns:dotSeparatorDate"/>
+        </sequence>
+    </complexType>
+
+    <simpleType name="dotSeparatorDate">
+        <restriction base="string">
+            <pattern value="(\d{2})\.(\d{2})\.(\d{4})"/>
+        </restriction>
+    </simpleType>
+
+    <complexType name="parentDocs">
+        <sequence>
+            <element name="ParentDocsNumber" type="string"/>
+            <element name="ParentDocsListNumber" type="string"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="documentSigns">
+        <sequence>
+            <element name="Sign" maxOccurs="unbounded" type="tns:sign"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="sign">
+        <sequence>
+            <element name="SignCard" type="tns:documentCard"/>
+            <element name="SignData" type="tns:signBody"/>
+        </sequence>
+        <attribute name="CriptoType" type="string" use="required"/>
+        <attribute name="Included" type="boolean" use="required"/>
+    </complexType>
+
+    <complexType name="signBody">
+        <sequence>
+            <element name="Data" type="base64Binary"/>
+            <element name="Url" type="string"/>
+        </sequence>
+        <attribute name="Format" type="string" use="required"/>
+    </complexType>
+</schema>

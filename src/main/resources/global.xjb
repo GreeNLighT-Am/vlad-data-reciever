@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<jaxb:bindings version="3.0" xmlns:jaxb="https://jakarta.ee/xml/ns/jaxb" xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc" xmlns:xs="http://www.w3.org/2001/XMLSchema"
+               jaxb:extensionBindingPrefixes="xjc">
+
+    <jaxb:globalBindings>
+        <xjc:javaType name="java.time.LocalDateTime" xmlType="xs:dateTime"
+                      adapter="ru.vlad.vlad_data_receiver.adapter.DateTimeAdapter"/>
+        <xjc:javaType name="java.lang.Object" xmlType="xs:anySimpleType"
+                      adapter="ru.vlad.vlad_data_receiver.adapter.ObjectAdapter"/>
+        <xjc:javaType name="java.time.LocalDateTime" xmlType="tns:dotSeparatorDate"
+                      adapter="ru.vlad.vlad_data_receiver.adapter.DotSeparatorDateAdapter"/>
+        <jaxb:serializable uid="1" />
+    </jaxb:globalBindings>
+</jaxb:bindings>
