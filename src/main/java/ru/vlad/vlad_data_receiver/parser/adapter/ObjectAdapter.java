@@ -1,4 +1,4 @@
-package ru.vlad.vlad_data_receiver.adapter;
+package ru.vlad.vlad_data_receiver.parser.adapter;
 
 import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 

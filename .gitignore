@@ -1,5 +1,6 @@
 HELP.md
 target/
+src/main/java/ru/vlad/vlad_data_receiver/model/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

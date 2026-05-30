@@ -1,4 +1,4 @@
-package ru.vlad.vlad_data_receiver.filter;
+package ru.vlad.vlad_data_receiver.parser.filter;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
