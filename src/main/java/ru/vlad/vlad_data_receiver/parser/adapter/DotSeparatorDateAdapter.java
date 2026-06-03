@@ -12,19 +12,19 @@ public class DotSeparatorDateAdapter extends XmlAdapter<String, LocalDateTime> {
     private static final String DATE_FORMAT = "dd.MM.yyyy";
 
     @Override
-    public LocalDateTime unmarshal(String v) {
+    public LocalDateTime unmarshal(String dateTimeValue) {
         DateTimeFormatter formatter = new DateTimeFormatterBuilder()
                 .appendPattern(DATE_FORMAT)
                 .parseDefaulting(ChronoField.HOUR_OF_DAY, 0)
                 .parseDefaulting(ChronoField.MINUTE_OF_HOUR, 0)
                 .parseDefaulting(ChronoField.SECOND_OF_MINUTE, 0)
                 .toFormatter();
-        return LocalDateTime.parse(v, formatter);
+        return LocalDateTime.parse(dateTimeValue, formatter);
     }
 
     @Override
-    public String marshal(LocalDateTime v) {
+    public String marshal(LocalDateTime dateTimeValue) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT);
-        return v.format(formatter);
+        return dateTimeValue.format(formatter);
     }
 }

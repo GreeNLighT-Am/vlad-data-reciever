@@ -50,9 +50,10 @@ public class XmlParserService {
                     document.getDocument().size());
 
             return document;
-        } catch (SAXException | JAXBException e) {
-            log.error("Ошибка при парсинге XML", e);
-            throw new XmlParsingException();
+        } catch (SAXException | JAXBException | NumberFormatException e) {
+            String errorMessage = "Ошибка при парсинге XML";
+            log.error(errorMessage, e);
+            throw new XmlParsingException(errorMessage, e);
         }
     }
 }

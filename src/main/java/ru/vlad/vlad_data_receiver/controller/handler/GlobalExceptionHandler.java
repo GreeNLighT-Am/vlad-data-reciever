@@ -10,9 +10,9 @@ import ru.vlad.vlad_data_receiver.exceptions.XmlParsingException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(XmlParsingException.class)
-    public ResponseEntity<String> handleXmlParsingException() {
+    public ResponseEntity<String> handleXmlParsingException(XmlParsingException e) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body("Ошибка при обработке XML");
+                .body(e.getMessage());
     }
 }
