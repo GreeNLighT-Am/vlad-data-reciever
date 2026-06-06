@@ -100,7 +100,7 @@
                     <noGeneratedHeaderComments>true</noGeneratedHeaderComments>
                     <extension>true</extension>
                     <generateEpisode>false</generateEpisode>
-                    <packageName>ru.vlad.vlad_data_receiver.model</packageName>
+                    <packageName>ru.vlad.vlad_data_receiver.parser.documents</packageName>
                 </configuration>
             </plugin>
 

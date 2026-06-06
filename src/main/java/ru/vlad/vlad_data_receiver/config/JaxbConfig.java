@@ -10,6 +10,6 @@ public class JaxbConfig {
 
     @Bean
     public JAXBContext jaxbContext() throws JAXBException {
-        return JAXBContext.newInstance("ru.vlad.vlad_data_receiver.model");
+        return JAXBContext.newInstance("ru.vlad.vlad_data_receiver.parser.documents");
     }
 }

@@ -4,11 +4,11 @@
 
     <jaxb:globalBindings>
         <xjc:javaType name="java.time.LocalDateTime" xmlType="xs:dateTime"
-                      adapter="ru.vlad.vlad_data_receiver.adapter.DateTimeAdapter"/>
+                      adapter="ru.vlad.vlad_data_receiver.parser.adapter.DateTimeAdapter"/>
         <xjc:javaType name="java.lang.Object" xmlType="xs:anySimpleType"
-                      adapter="ru.vlad.vlad_data_receiver.adapter.ObjectAdapter"/>
+                      adapter="ru.vlad.vlad_data_receiver.parser.adapter.ObjectAdapter"/>
         <xjc:javaType name="java.time.LocalDateTime" xmlType="tns:dotSeparatorDate"
-                      adapter="ru.vlad.vlad_data_receiver.adapter.DotSeparatorDateAdapter"/>
+                      adapter="ru.vlad.vlad_data_receiver.parser.adapter.DotSeparatorDateAdapter"/>
         <jaxb:serializable uid="1" />
     </jaxb:globalBindings>
 </jaxb:bindings>
