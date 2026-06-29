@@ -3,7 +3,6 @@ package ru.vlad.vlad_data_receiver.service;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import ru.vlad.vlad_data_receiver.entity.DepartmentsEntity;
 import ru.vlad.vlad_data_receiver.repository.DepartmentsRepository;
 
@@ -14,18 +13,36 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DepartmentsService {
     private final DepartmentsRepository departmentsRepository;
-    private Map<String, DepartmentsEntity> departmentsCache = new HashMap<>();
+    private final Map<Integer, DepartmentsEntity> departmentsCache = new HashMap<>();
 
     @PostConstruct
-    @Transactional(readOnly = true)
     public void init() {
-        departmentsRepository
-                .findAll()
-                .forEach(departments ->
-                        departmentsCache.put(departments.getCode(), departments));
+        fillCache();
     }
 
-    public boolean isDepartmentValid(String code) {
+    private void fillCache() {
+        departmentsRepository
+                .findAll()
+                .forEach(departmentsEntity ->
+                        departmentsCache.put(departmentsEntity.getCode(), departmentsEntity));
+    }
+
+    private void evictCache() {
+        departmentsCache.clear();
+    }
+
+    private void refreshCache() {
+        evictCache();
+        fillCache();
+    }
+
+    public boolean isDepartmentValid(Integer code) {
+        if (departmentsCache.containsKey(code)) {
+            return true;
+        }
+
+        refreshCache();
+
         return departmentsCache.containsKey(code);
     }
 }

@@ -20,5 +20,5 @@ public class SourceSystemsEntity {
 
     private String name;
 
-    private Integer is_manual;
+    private Boolean isManual;
 }

@@ -8,7 +8,7 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -18,13 +18,13 @@ import java.time.LocalDate;
 @Table(name = "departments", schema = "vlad_db")
 public class DepartmentsEntity {
     @Id
-    private String code;
+    private Integer code;
 
     private String name;
 
-    private LocalDate create_date;
+    private LocalDateTime createDate;
 
-    private LocalDate modify_date;
+    private LocalDateTime modifyDate;
 
-    private Integer is_active;
+    private Boolean isActive;
 }

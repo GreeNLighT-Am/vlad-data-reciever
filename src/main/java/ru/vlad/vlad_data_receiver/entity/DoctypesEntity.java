@@ -8,6 +8,8 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @Builder
@@ -20,7 +22,7 @@ public class DoctypesEntity {
 
     private String name;
 
-    private Long group_id;
+    private Long groupId;
 
-    private Integer life_time;
+    private BigDecimal lifeTime;
 }

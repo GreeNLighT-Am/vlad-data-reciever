@@ -45,9 +45,9 @@ public class DocumentInputRequestValidator {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
     private static final Pattern DATE_PATTERN = Pattern.compile("\\d{2}\\.\\d{2}\\.\\d{4}");
     private static final Pattern FULL_NAME_PATTERN = Pattern.compile(
-            "^[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\\s" +        // Фамилия с возможным дефисом
-                    "[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?" +    // Имя с возможным дефисом
-                    "\\s[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?$"  // Отчество с возможным дефисом
+            "^[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\\s" +
+                    "[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?" +
+                    "\\s[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?$"
     );
     private static final String ERROR_MESSAGE = "ErrorUnloadingEvent";
 
@@ -55,17 +55,51 @@ public class DocumentInputRequestValidator {
 
     @PostConstruct
     public void initValidators() {
-        validators.put(DocumentAttributeCodes.DocType, this::validateDocType);
-        validators.put(DocumentAttributeCodes.DocNumber, this::validateDocNumber);
-        validators.put(DocumentAttributeCodes.DocDate, this::validateDocDate);
-        validators.put(DocumentAttributeCodes.DocAccount, this::validateDocAccount);
-        validators.put(DocumentAttributeCodes.DocSourceSystem, this::validateDocSourceSystem);
-        validators.put(DocumentAttributeCodes.DocTimeStamp, this::validateDocTimeStamp);
-        validators.put(DocumentAttributeCodes.DocSum, this::validateDocSum);
-        validators.put(DocumentAttributeCodes.DocStatus, this::validateDocStatus);
-        validators.put(DocumentAttributeCodes.DocSKOSymbol, this::validateDocSKOSymbol);
-        validators.put(DocumentAttributeCodes.DocSign1, this::validateDocSign1);
-        validators.put(DocumentAttributeCodes.DocSign2, this::validateDocSign2);
+        validators.put(DocumentAttributeCodes.DOC_TYPE, this::validateDocType);
+        validators.put(DocumentAttributeCodes.DOC_NUMBER, this::validateDocNumber);
+        validators.put(DocumentAttributeCodes.DOC_DATE, this::validateDocDate);
+        validators.put(DocumentAttributeCodes.DOC_ACCOUNT, this::validateDocAccount);
+        validators.put(DocumentAttributeCodes.DOC_SOURCE_SYSTEM, this::validateDocSourceSystem);
+        validators.put(DocumentAttributeCodes.DOC_TIME_STAMP, this::validateDocTimeStamp);
+        validators.put(DocumentAttributeCodes.DOC_SUM, this::validateDocSum);
+        validators.put(DocumentAttributeCodes.DOC_STATUS, this::validateDocStatus);
+        validators.put(DocumentAttributeCodes.DOC_SKO_SYMBOL, this::validateDocSKOSymbol);
+        validators.put(DocumentAttributeCodes.DOC_SIGN_1, this::validateDocSign1);
+        validators.put(DocumentAttributeCodes.DOC_SIGN_2, this::validateDocSign2);
+    }
+
+    private void processValidationError(String message) {
+        log.error(message);
+        throw new ValidationException(ERROR_MESSAGE);
+    }
+
+    private void nullOrBlankAttributeValidation(String attributeValue, String attribute) {
+        if (attributeValue == null) {
+            processValidationError(String.format("Атрибут %s не передан", attribute));
+        } else if (attributeValue.isBlank()) {
+            processValidationError(String.format("В атрибут %s передано пустое значение", attribute));
+        }
+    }
+
+    private void nullOrBlankWithSeqNFormatValidation(String format, String tag, String attribute, int seqN) {
+        if (format == null) {
+            processValidationError(String.format("В документе №%d в тэг %s не передан атрибут %s", seqN, tag, attribute));
+        } else if (format.isBlank()) {
+            processValidationError(String.format("В документе №%d в тэге %s в атрибут %s не передано значение", seqN, tag, attribute));
+        }
+    }
+
+    private String nullOrBlankObjectValidationAndToString(Object object, int seqN, String attributeCode) {
+        if (object == null) {
+            processValidationError(String.format("В документе №%d не передан аттрибут AttributeValue для AttributeCode=\"%s\"", seqN, attributeCode));
+        }
+
+        String objectStr = object.toString();
+        if (objectStr.isBlank()) {
+            processValidationError(String.format("В документе №%d передано пустое значение атрибута %s", seqN, attributeCode));
+        }
+
+        return objectStr;
     }
 
     public void validate(DocumentInputRequest documentInputRequest) {
@@ -93,76 +127,53 @@ public class DocumentInputRequestValidator {
     }
 
     private void validateId(String id) {
-        if (id == null) {
-            log.error("Атрибут ID не передан");
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (id.isBlank()) {
-            log.error("Передано пустое значение в атрибуте ID");
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeName = "ID";
+        nullOrBlankAttributeValidation(id, attributeName);
     }
 
     private void validateTimeStamp(LocalDateTime timeStamp) {
         if (timeStamp == null) {
-            log.error("Атрибут TimeStamp не передан или передан некорректный формат");
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError("Атрибут TimeStamp не передан или передан некорректный формат");
         }
     }
 
     private void validateBlockNum(int blockNum) {
         if (blockNum <= 0) {
-            log.error("Атрибут blockNum не передан или передано некорректное значение");
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError("Атрибут blockNum не передан или передано некорректное значение");
         }
     }
 
     private void validateTotalDocs(int totalDocs) {
         if (totalDocs <= 0) {
-            log.error("Атрибут totalDocs не передан или передано некорректное значение");
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError("Атрибут totalDocs не передан или передано некорректное значение");
         }
     }
 
     private void validateIsBlockNumMoreThenTotalDocs(int blockNum, int totalDocs) {
         if (blockNum > totalDocs) {
-            log.error("Значение атрибута blockNum больше значения атрибута totalDocs");
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError("Значение атрибута blockNum больше значения атрибута totalDocs");
         }
     }
 
     private void validateDataSet(String dataSet) {
-        if (dataSet == null) {
-            log.error("Атрибут dataSet не передан");
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (dataSet.isBlank()) {
-            log.error("Передано пустое значение в атрибуте dataSet");
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeName = "dataSet";
+        nullOrBlankAttributeValidation(dataSet, attributeName);
     }
 
     private void validateOdDocType(String odDocType) {
-        if (odDocType == null) {
-            log.error("Атрибут odDocType не передан");
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (odDocType.isBlank()) {
-            log.error("В атрибут odDocType передано пустое значение ");
-            throw new ValidationException(ERROR_MESSAGE);
-        }
-        try {
-            OdDocTypes.valueOf(odDocType);
-        } catch (IllegalArgumentException e) {
-            log.error("В атрибут odDocType передано невалидное значение ");
-            throw new ValidationException(ERROR_MESSAGE);
+        String attributeName = "odDocType";
+        nullOrBlankAttributeValidation(odDocType, attributeName);
+
+        if (!OdDocTypes.isValid(odDocType)) {
+            processValidationError(String.format("В атрибут %s передано некорректное значение, допустимые: %s", attributeName));
         }
     }
 
     private void validateDocuments(List<Document> documents, int totalDocs) {
         if (documents.isEmpty()) {
-            log.error("Не обнаружен ни один тэг Document)");
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError("Не обнаружен ни один тэг Document)");
         } else if (totalDocs > documents.size()) {
-            log.error("Передано меньше документов чем ожидается");
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError("Передано меньше документов чем ожидается");
         }
 
         for (Document Document : documents) {
@@ -174,11 +185,10 @@ public class DocumentInputRequestValidator {
         int seqN = document.getSeqN();
 
         if (totalDocs > 1 && seqN <= 0) {
-            log.error("В одном или нескольких тэгах Document не передан атрибут SeqN или передано не валидное значение");
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError("В одном или нескольких тэгах Document не передан атрибут SeqN или передано некорректное значение");
+
         } else if (totalDocs > 1 && seqN > totalDocs) {
-            log.error("В одном или нескольких тэгах Document передан атрибут SeqN со значением превышающим значение атрибута totalDocs");
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError("В одном или нескольких тэгах Document передан атрибут SeqN со значением превышающим значение атрибута totalDocs");
         } else if (totalDocs == 1 && seqN <= 0) {
             seqN = 1;
         }
@@ -189,17 +199,16 @@ public class DocumentInputRequestValidator {
 
     private void validateDocumentCard(DocumentCard documentCard, int seqN) {
         if (documentCard == null) {
-            log.error("В документе №{} не передан тэг DocumentCard", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d не передан тэг DocumentCard", seqN));
         }
 
         validateVariableAttributes(documentCard.getVariableAttribute(), seqN);
     }
 
+
     private void validateVariableAttributes(List<DocumentAttribute> attributesList, int seqN) {
         if (attributesList.isEmpty()) {
-            log.error("В документе №{}, в тэг DocumentCard не передан ни один тэг VariableAttribute", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d, в тэг DocumentCard не передан ни один тэг VariableAttribute", seqN));
         }
 
         Set<String> requiredAttributes = DocumentAttributeCodes.getRequiredCodes();
@@ -210,11 +219,9 @@ public class DocumentInputRequestValidator {
             Object attrValue = attr.getAttributeValue();
 
             if (attrCodeStr == null) {
-                log.error("В документе №{} в одном или нескольких тегах VariableAttribute не передан атрибут AttributeCode", seqN);
-                throw new ValidationException(ERROR_MESSAGE);
+                processValidationError(String.format("В документе №%d в одном или нескольких тегах VariableAttribute не передан атрибут AttributeCode", seqN));
             } else if (attrCodeStr.isBlank()) {
-                log.error("В документе №{}, в одном или нескольких тегах VariableAttribute в атрибут AttributeCode передано пустое значение", seqN);
-                throw new ValidationException(ERROR_MESSAGE);
+                processValidationError(String.format("В документе №%d, в одном или нескольких тегах VariableAttribute в атрибут AttributeCode передано пустое значение", seqN));
             }
 
             foundAttributes.add(attrCodeStr);
@@ -234,226 +241,139 @@ public class DocumentInputRequestValidator {
         missingAttributes.removeAll(foundAttributes);
 
         if (!missingAttributes.isEmpty()) {
-            log.error("В документе №{} для обязательного AttributeCode: {} передано некорректное значение", seqN, missingAttributes);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d для обязательного AttributeCode: %s передано некорректное значение", seqN, missingAttributes));
         }
     }
 
-    private void validateDocType(Object DocType, int seqN) {
-        if (DocType == null) {
-            log.error("В документе №{} не передан аттрибут AttributeValue для AttributeCode=\"DocType\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (DocType.toString().isBlank()) {
-            log.error("В документе №{} не передано значение аттрибута AttributeValue в AttributeCode=\"DocType\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (!doctypesService.isDoctypesValid(DocType.toString())) {
-            log.error("В документе №{} не валидное значение аттрибута AttributeValue для AttributeCode=\"DocType\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+    private void validateDocType(Object docType, int seqN) {
+        String attributeCode = DocumentAttributeCodes.DOC_TYPE.getCode();
+        String docTypeSrt = nullOrBlankObjectValidationAndToString(docType, seqN, attributeCode);
+
+        if (!doctypesService.isDoctypesValid(docTypeSrt)) {
+            processValidationError(String.format("В документе №%d невалидное значение аттрибута %s", seqN, attributeCode));
         }
     }
 
-    private void validateDocNumber(Object docNumberValue, int seqN) {
-        if (docNumberValue == null) {
-            log.error("В документе №{} не передан аттрибут AttributeValue для AttributeCode=\"DocNumber\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (docNumberValue.toString().isBlank()) {
-            log.error("В документе №{} не передано значение аттрибута AttributeValue в AttributeCode=\"DocNumber\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+    private void validateDocNumber(Object docNumber, int seqN) {
+        String attributeCode = DocumentAttributeCodes.DOC_NUMBER.getCode();
+        nullOrBlankObjectValidationAndToString(docNumber, seqN, attributeCode);
     }
 
     private void validateDocDate(Object docDate, int seqN) {
-        if (docDate == null) {
-            log.error("В документе №{} не передан аттрибут AttributeValue для AttributeCode=\"DocDate\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+        String attributeCode = DocumentAttributeCodes.DOC_DATE.getCode();
+        String docDateStr = nullOrBlankObjectValidationAndToString(docDate, seqN, attributeCode);
+
+        if (docDate instanceof LocalDateTime ldt) {
+            docDateStr = ldt.format(DATE_FORMATTER);
         }
 
-        String dateStr = docDate.toString();
-
-        if (dateStr.isBlank()) {
-            log.error("В документе №{} значение AttributeValue для AttributeCode=\"DocDate\" передано пустым", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (docDate instanceof LocalDateTime ldt) {
-            dateStr = ldt.format(DATE_FORMATTER);
-        }
-
-        if (!DATE_PATTERN.matcher(dateStr).matches()) {
-            log.error("В документе №{}, в параметр AttributeValue для AttributeCode=\"DocDate\" передано невалидное значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+        if (!DATE_PATTERN.matcher(docDateStr).matches()) {
+            processValidationError(String.format("В документе №%d, в параметр %s передано невалидное значение", seqN, attributeCode));
         }
     }
 
     private void validateDocAccount(Object docAccount, int seqN) {
-        if (docAccount == null) {
-            log.error("В документе №{} не передан аттрибут AttributeValue для AttributeCode=\"DocAccount\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeCode = DocumentAttributeCodes.DOC_ACCOUNT.getCode();
+        String docAccountStr = nullOrBlankObjectValidationAndToString(docAccount, seqN, attributeCode);
 
-        String docAccountStr = docAccount.toString();
-
-        if (docAccountStr.isBlank()) {
-            log.error("В документе №{} не передано значение AttributeValue в AttributeCode=\"DocAccount\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (!departmentsService.isDepartmentValid(docAccountStr)) {
-            log.error("В документе №{} невалидное значение аттрибута AttributeValue для AttributeCode=\"DocAccount\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+        try {
+            int docAccountInt = Integer.parseInt(docAccountStr);
+            if (!departmentsService.isDepartmentValid(docAccountInt)) {
+                processValidationError(String.format("В документе №%d невалидное значение аттрибута %s", seqN, attributeCode));
+            }
+        } catch (NumberFormatException e) {
+            processValidationError(String.format("В документе №%d некорректное значение аттрибута %s", seqN, attributeCode));
         }
     }
 
     private void validateDocSourceSystem(Object docSourceSystem, int seqN) {
-        if (docSourceSystem == null) {
-            log.error("В документе №{} не передан аттрибут AttributeValue для AttributeCode=\"SourceSystem\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeCode = DocumentAttributeCodes.DOC_SOURCE_SYSTEM.getCode();
+        String docSourceSystemStr = nullOrBlankObjectValidationAndToString(docSourceSystem, seqN, attributeCode);
 
-        String docSourceSystemStr = docSourceSystem.toString();
-
-        if (docSourceSystemStr.isBlank()) {
-            log.error("В документе №{} не передано значение аттрибута AttributeValue в AttributeCode=\"DocSourceSystem\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (!sourceSystemsService.isSourceSystemValid(docSourceSystemStr)) {
-            log.error("В документе №{} невалидное значение аттрибута AttributeValue для AttributeCode=\"DocSourceSystem\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+        if (!sourceSystemsService.isSourceSystemValid(docSourceSystemStr)) {
+            processValidationError(String.format("В документе №%d невалидное значение аттрибута %s", seqN, attributeCode));
         }
     }
 
     private void validateDocTimeStamp(Object docTimeStamp, int seqN) {
-        if (docTimeStamp == null) {
-            log.error("В документе №{} не передан атрибут AttributeValue аттрибута AttributeCode=\"DocTimeStamp\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeCode = DocumentAttributeCodes.DOC_TIME_STAMP.getCode();
+        String timestampStr = nullOrBlankObjectValidationAndToString(docTimeStamp, seqN, attributeCode);
 
-        String timestampStr = docTimeStamp.toString();
-        if (timestampStr.isBlank()) {
-            log.error("В документе №{} в атрибут AttributeValue атрибута AttributeCode=\"DocTimeStamp\" передано пустое значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (docTimeStamp instanceof LocalDateTime ldt) {
+        if (docTimeStamp instanceof LocalDateTime ldt) {
             timestampStr = ldt.format(TIMESTAMP_FORMATTER);
         }
 
         try {
             TIMESTAMP_FORMATTER.parse(timestampStr);
         } catch (DateTimeParseException e) {
-            log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocTimeStamp\" передано некорректное значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в атрибут %s передано некорректное значение", seqN, attributeCode));
         }
     }
 
     private void validateDocSum(Object docSum, int seqN) {
-        if (docSum == null) {
-            log.error("В документе №{} не передан аттрибут AttributeValue для AttributeCode=\"DocSum\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
-
-        String docSumStr = docSum.toString();
-        if (docSumStr.isBlank()) {
-            log.error("В документе №{} не передано значение аттрибута AttributeValue для AttributeCode=\"DocSum\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeCode = DocumentAttributeCodes.DOC_SUM.getCode();
+        String docSumStr = nullOrBlankObjectValidationAndToString(docSum, seqN, attributeCode);
 
         try {
             double docSumDouble = Double.parseDouble(docSumStr);
             if (docSumDouble < 0) {
-                log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocSum\" передано отрицательное значение", seqN);
-                throw new ValidationException(ERROR_MESSAGE);
+                processValidationError(String.format("В документе №%d в атрибут %s передано отрицательное значение", seqN, attributeCode));
             }
         } catch (NumberFormatException e) {
-            log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocSum\" передано невалидное значение",
-                    seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение", seqN, attributeCode));
         }
     }
 
     private void validateDocStatus(Object docStatus, int seqN) {
-        if (docStatus == null) {
-            log.error("В документе №{} не передан аттрибут AttributeValue для AttributeCode=\"DocStatus\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
-
-        String docStatusStr = docStatus.toString();
-        if (docStatusStr.isBlank()) {
-            log.error("В документе №{} не передано значение атрибута AttributeValue для AttributeCode=\"DocStatus\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeCode = DocumentAttributeCodes.DOC_STATUS.getCode();
+        String docStatusStr = nullOrBlankObjectValidationAndToString(docStatus, seqN, attributeCode);
 
         try {
             int docStatusInt = Integer.parseInt(docStatusStr);
 
             if (!(docStatusInt == 0) && !(docStatusInt == 1)) {
-                log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocStatus\" передано некорректное значение", seqN);
-                throw new ValidationException(ERROR_MESSAGE);
+                processValidationError(String.format("В документе №%d в атрибут %s передано некорректное значение", seqN, attributeCode));
             }
         } catch (NumberFormatException e) {
-            log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocStatus\" передано невалидное значение ", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение ", seqN, attributeCode));
         }
     }
 
     private void validateDocSKOSymbol(Object docSKOSymbol, int seqN) {
-        if (docSKOSymbol == null) {
-            log.error("В документе №{} не передан атрибут AttributeValue для AttributeCode=\"DocSKOSymbol\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
-
-        String docSKOSymbolStr = docSKOSymbol.toString();
-        if (docSKOSymbolStr.isBlank()) {
-            log.error("В документе №{} не передано значение атрибута AttributeValue для AttributeCode=\"DocSKOSymbol\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeCode = DocumentAttributeCodes.DOC_SKO_SYMBOL.getCode();
+        String docSKOSymbolStr = nullOrBlankObjectValidationAndToString(docSKOSymbol, seqN, attributeCode);
 
         try {
             int docSKOSymbolInt = Integer.parseInt(docSKOSymbolStr);
             if (docSKOSymbolInt < 0) {
-                log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocSKOSymbol\" передано отрицательное значение", seqN);
-                throw new ValidationException(ERROR_MESSAGE);
+                processValidationError(String.format("В документе №%d в атрибут %s передано отрицательное значение", seqN, attributeCode));
             }
         } catch (NumberFormatException e) {
-            log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocSKOSymbol\" передано невалидное значение",
-                    seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение", seqN, attributeCode));
         }
     }
 
     private void validateDocSign1(Object docSign1, int seqN) {
-        if (docSign1 == null) {
-            log.error("В документе №{} не передан атрибут AttributeValue для AttributeCode=\"DocSign1\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
-
-        String docSign1Str = docSign1.toString();
-        if (docSign1Str.isBlank()) {
-            log.error("В документе №{} не передано значение атрибута AttributeValue в AttributeCode=\"DocSign1\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeCode = DocumentAttributeCodes.DOC_SKO_SYMBOL.getCode();
+        String docSign1Str = nullOrBlankObjectValidationAndToString(docSign1, seqN, attributeCode);
 
         if (!FULL_NAME_PATTERN.matcher(docSign1Str).matches()) {
-            log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocSign1\" передано невалидное значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение", seqN, attributeCode));
         }
     }
 
     private void validateDocSign2(Object docSign2, int seqN) {
-        if (docSign2 == null) {
-            log.error("В документе №{} не передан атрибут AttributeValue для AttributeCode=\"DocSign2\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
-
-        String docSign2Str = docSign2.toString();
-        if (docSign2Str.isBlank()) {
-            log.error("В документе №{} не передано значение атрибута AttributeValue в AttributeCode=\"DocSign2\"", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String attributeCode = DocumentAttributeCodes.DOC_SKO_SYMBOL.getCode();
+        String docSign2Str = nullOrBlankObjectValidationAndToString(docSign2, seqN, attributeCode);
 
         if (!FULL_NAME_PATTERN.matcher(docSign2Str).matches()) {
-            log.error("В документе №{} в атрибут AttributeValue для AttributeCode=\"DocSign2\" передано невалидное значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение", seqN, attributeCode));
         }
     }
 
     private void validateDocumentBody(DocumentBody documentBody, int seqN) {
         if (documentBody == null) {
-            log.error("В документе №{} не передан тэг DocumentBody", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d не передан тэг DocumentBody", seqN));
         }
 
         validateContent(documentBody.getContent(), seqN);
@@ -461,8 +381,7 @@ public class DocumentInputRequestValidator {
 
     private void validateContent(List<Content> contentList, int seqN) {
         if (contentList.isEmpty()) {
-            log.error("В документе №{} в тэг DocumentBody не передан тэг Content", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в тэг DocumentBody не передан тэг Content", seqN));
         }
 
         for (Content content : contentList) {
@@ -472,26 +391,19 @@ public class DocumentInputRequestValidator {
     }
 
     private void validateContentFormat(String contentFormat, int seqN) {
-        if (contentFormat == null) {
-            log.error("В документе №{} в тэг Content не передан атрибут Format", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (contentFormat.isBlank()) {
-            log.error("В документе №{} в тэге Content в атрибут Format не передано значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+        String tag = "Content";
+        String attribute = "Format";
 
-        try {
-            ContentFormats.valueOf(contentFormat.toLowerCase());
-        } catch (IllegalArgumentException e) {
-            log.error("В документе №{} в тэге Content в атрибут Format передано некорректное значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+        nullOrBlankWithSeqNFormatValidation(contentFormat, tag, attribute, seqN);
+
+        if (!ContentFormats.isValid(contentFormat)) {
+            processValidationError(String.format("В документе №%d в тэге %s в атрибут %s передано некорректное значение", seqN, tag, attribute));
         }
     }
 
     private void validateDocumentSings(DocumentSigns documentSigns, int seqN) {
         if (documentSigns == null) {
-            log.error("В документе №{} тэг Content не передан тэг DocumentSigns", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в тэг Content не передан тэг DocumentSigns", seqN));
         }
 
         validateSign(documentSigns.getSign(), seqN);
@@ -499,8 +411,7 @@ public class DocumentInputRequestValidator {
 
     private void validateSign(List<Sign> sign, int seqN) {
         if (sign.isEmpty()) {
-            log.error("В документе №{} в тэг DocumentSigns не передан тэг Sign", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в тэг DocumentSigns не передан тэг Sign", seqN));
         }
 
         for (Sign signs : sign) {
@@ -510,27 +421,20 @@ public class DocumentInputRequestValidator {
 
     private void validateSignData(SignBody signData, int seqN) {
         if (signData == null) {
-            log.error("В документе №{} в тэг Sign не передан тэг SignData", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+            processValidationError(String.format("В документе №%d в тэг Sign не передан тэг SignData", seqN));
         }
 
         validateSignDataFormat(signData.getFormat(), seqN);
     }
 
-    private void validateSignDataFormat(String format, int seqN) {
-        if (format == null) {
-            log.error("В документе №{} в тэг SignData не передан атрибут Format", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        } else if (format.isBlank()) {
-            log.error("В документе №{} в тэге SignData в атрибут Format передано пустое значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
-        }
+    private void validateSignDataFormat(String signDataFormat, int seqN) {
+        String tag = "SignData";
+        String attribute = "Format";
 
-        try {
-            SignDataFormats.valueOf(format.toLowerCase());
-        } catch (IllegalArgumentException e) {
-            log.error("В документе №{} в тэге SignData в атрибут Format передано невалидное значение", seqN);
-            throw new ValidationException(ERROR_MESSAGE);
+        nullOrBlankWithSeqNFormatValidation(signDataFormat, tag, attribute, seqN);
+
+        if (!SignDataFormats.isValid(signDataFormat)) {
+            processValidationError(String.format("В документе №%d в тэге %s в атрибут %s передано невалидное значение", seqN, tag, attribute));
         }
     }
 }
