@@ -1,6 +1,5 @@
 package ru.vlad.vlad_data_receiver.validator;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,12 +24,9 @@ import ru.vlad.vlad_data_receiver.service.SourceSystemsService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -43,7 +39,6 @@ public class DocumentInputRequestValidator {
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private static final Pattern DATE_PATTERN = Pattern.compile("\\d{2}\\.\\d{2}\\.\\d{4}");
     private static final Pattern FULL_NAME_PATTERN = Pattern.compile(
             "^[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?\\s" +
                     "[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?" +
@@ -51,26 +46,21 @@ public class DocumentInputRequestValidator {
     );
     private static final String ERROR_MESSAGE = "ErrorUnloadingEvent";
 
-    private final Map<DocumentAttributeCodes, BiConsumer<Object, Integer>> validators = new EnumMap<>(DocumentAttributeCodes.class);
-
-    @PostConstruct
-    public void initValidators() {
-        validators.put(DocumentAttributeCodes.DOC_TYPE, this::validateDocType);
-        validators.put(DocumentAttributeCodes.DOC_NUMBER, this::validateDocNumber);
-        validators.put(DocumentAttributeCodes.DOC_DATE, this::validateDocDate);
-        validators.put(DocumentAttributeCodes.DOC_ACCOUNT, this::validateDocAccount);
-        validators.put(DocumentAttributeCodes.DOC_SOURCE_SYSTEM, this::validateDocSourceSystem);
-        validators.put(DocumentAttributeCodes.DOC_TIME_STAMP, this::validateDocTimeStamp);
-        validators.put(DocumentAttributeCodes.DOC_SUM, this::validateDocSum);
-        validators.put(DocumentAttributeCodes.DOC_STATUS, this::validateDocStatus);
-        validators.put(DocumentAttributeCodes.DOC_SKO_SYMBOL, this::validateDocSKOSymbol);
-        validators.put(DocumentAttributeCodes.DOC_SIGN_1, this::validateDocSign1);
-        validators.put(DocumentAttributeCodes.DOC_SIGN_2, this::validateDocSign2);
-    }
-
     private void processValidationError(String message) {
         log.error(message);
         throw new ValidationException(ERROR_MESSAGE);
+    }
+
+    private void validateNotNull(Object object, String attributeCode) {
+        if (object == null) {
+            processValidationError(String.format("Атрибут %s не передан или передан некорректный формат", attributeCode));
+        }
+    }
+
+    private void validateIsPositive(int value, String attributeCode) {
+        if (value <= 0) {
+            processValidationError(String.format("Атрибут %s не передан или передано некорректное значение", attributeCode));
+        }
     }
 
     private void nullOrBlankAttributeValidation(String attributeValue, String attribute) {
@@ -91,7 +81,7 @@ public class DocumentInputRequestValidator {
 
     private String nullOrBlankObjectValidationAndToString(Object object, int seqN, String attributeCode) {
         if (object == null) {
-            processValidationError(String.format("В документе №%d не передан аттрибут AttributeValue для AttributeCode=\"%s\"", seqN, attributeCode));
+            processValidationError(String.format("В документе №%d не передано значение атрибута \"%s\"", seqN, attributeCode));
         }
 
         String objectStr = object.toString();
@@ -109,55 +99,17 @@ public class DocumentInputRequestValidator {
 
     private void validateAttributes(DocumentInputRequest documentInputRequest) {
 
-        validateId(documentInputRequest.getID());
+        nullOrBlankAttributeValidation(documentInputRequest.getID(), "ID");
 
-        validateTimeStamp(documentInputRequest.getTimeStamp());
+        validateNotNull(documentInputRequest.getTimeStamp(), "TimeStamp");
 
-        int blockNum = documentInputRequest.getBlockNum();
-        validateBlockNum(blockNum);
+        validateIsPositive(documentInputRequest.getBlockNum(), "BlockNum");
 
-        int totalDocs = documentInputRequest.getTotalDocs();
-        validateTotalDocs(totalDocs);
+        validateIsPositive(documentInputRequest.getTotalDocs(), "TotalDocs");
 
-        validateIsBlockNumMoreThenTotalDocs(blockNum, totalDocs);
-
-        validateDataSet(documentInputRequest.getDataSet());
+        nullOrBlankAttributeValidation(documentInputRequest.getDataSet(), "dataSet");
 
         validateOdDocType(documentInputRequest.getOdDocType());
-    }
-
-    private void validateId(String id) {
-        String attributeName = "ID";
-        nullOrBlankAttributeValidation(id, attributeName);
-    }
-
-    private void validateTimeStamp(LocalDateTime timeStamp) {
-        if (timeStamp == null) {
-            processValidationError("Атрибут TimeStamp не передан или передан некорректный формат");
-        }
-    }
-
-    private void validateBlockNum(int blockNum) {
-        if (blockNum <= 0) {
-            processValidationError("Атрибут blockNum не передан или передано некорректное значение");
-        }
-    }
-
-    private void validateTotalDocs(int totalDocs) {
-        if (totalDocs <= 0) {
-            processValidationError("Атрибут totalDocs не передан или передано некорректное значение");
-        }
-    }
-
-    private void validateIsBlockNumMoreThenTotalDocs(int blockNum, int totalDocs) {
-        if (blockNum > totalDocs) {
-            processValidationError("Значение атрибута blockNum больше значения атрибута totalDocs");
-        }
-    }
-
-    private void validateDataSet(String dataSet) {
-        String attributeName = "dataSet";
-        nullOrBlankAttributeValidation(dataSet, attributeName);
     }
 
     private void validateOdDocType(String odDocType) {
@@ -172,8 +124,6 @@ public class DocumentInputRequestValidator {
     private void validateDocuments(List<Document> documents, int totalDocs) {
         if (documents.isEmpty()) {
             processValidationError("Не обнаружен ни один тэг Document)");
-        } else if (totalDocs > documents.size()) {
-            processValidationError("Передано меньше документов чем ожидается");
         }
 
         for (Document Document : documents) {
@@ -231,9 +181,21 @@ public class DocumentInputRequestValidator {
                 continue;
             }
 
-            BiConsumer<Object, Integer> validator = validators.get(attrCode);
-            if (validator != null) {
-                validator.accept(attrValue, seqN);
+            switch (attrCode) {
+                case DOC_TYPE -> validateDocType(attrValue, seqN);
+                case DOC_NUMBER ->
+                        nullOrBlankObjectValidationAndToString(attrValue, seqN, DocumentAttributeCodes.DOC_NUMBER.getCode());
+                case DOC_DATE ->
+                        validateByDateTimeFormatter(attrValue, seqN, DocumentAttributeCodes.DOC_DATE.getCode(), DATE_FORMATTER);
+                case DOC_ACCOUNT -> validateDocAccount(attrValue, seqN);
+                case DOC_SOURCE_SYSTEM -> validateDocSourceSystem(attrValue, seqN);
+                case DOC_TIME_STAMP ->
+                        validateByDateTimeFormatter(attrValue, seqN, DocumentAttributeCodes.DOC_TIME_STAMP.getCode(), TIMESTAMP_FORMATTER);
+                case DOC_STATUS -> validateDocStatus(attrValue, seqN);
+                case DOC_SUM -> validateDocSum(attrValue, seqN);
+                case DOC_SKO_SYMBOL -> validateDocSKOSymbol(attrValue, seqN);
+                case DOC_SIGN_1 -> validateDocSigns(attrValue, seqN, DocumentAttributeCodes.DOC_SIGN_1.getCode());
+                case DOC_SIGN_2 -> validateDocSigns(attrValue, seqN, DocumentAttributeCodes.DOC_SIGN_2.getCode());
             }
         }
 
@@ -241,7 +203,8 @@ public class DocumentInputRequestValidator {
         missingAttributes.removeAll(foundAttributes);
 
         if (!missingAttributes.isEmpty()) {
-            processValidationError(String.format("В документе №%d для обязательного AttributeCode: %s передано некорректное значение", seqN, missingAttributes));
+            processValidationError(String.format("В документе №%d не передан обязательный атрибут \"%s\" или передан недопустимый",
+                    seqN, String.join(", ", missingAttributes)));
         }
     }
 
@@ -254,21 +217,17 @@ public class DocumentInputRequestValidator {
         }
     }
 
-    private void validateDocNumber(Object docNumber, int seqN) {
-        String attributeCode = DocumentAttributeCodes.DOC_NUMBER.getCode();
-        nullOrBlankObjectValidationAndToString(docNumber, seqN, attributeCode);
-    }
+    private void validateByDateTimeFormatter(Object object, int seqN, String attributeCode, DateTimeFormatter formatter) {
+        String objStr = nullOrBlankObjectValidationAndToString(object, seqN, attributeCode);
 
-    private void validateDocDate(Object docDate, int seqN) {
-        String attributeCode = DocumentAttributeCodes.DOC_DATE.getCode();
-        String docDateStr = nullOrBlankObjectValidationAndToString(docDate, seqN, attributeCode);
-
-        if (docDate instanceof LocalDateTime ldt) {
-            docDateStr = ldt.format(DATE_FORMATTER);
+        if (object instanceof LocalDateTime ldt) {
+            objStr = ldt.format(formatter);
         }
 
-        if (!DATE_PATTERN.matcher(docDateStr).matches()) {
-            processValidationError(String.format("В документе №%d, в параметр %s передано невалидное значение", seqN, attributeCode));
+        try {
+            formatter.parse(objStr);
+        } catch (DateTimeParseException e) {
+            processValidationError(String.format("В документе №%d в атрибут %s передано некорректное значение", seqN, attributeCode));
         }
     }
 
@@ -295,21 +254,6 @@ public class DocumentInputRequestValidator {
         }
     }
 
-    private void validateDocTimeStamp(Object docTimeStamp, int seqN) {
-        String attributeCode = DocumentAttributeCodes.DOC_TIME_STAMP.getCode();
-        String timestampStr = nullOrBlankObjectValidationAndToString(docTimeStamp, seqN, attributeCode);
-
-        if (docTimeStamp instanceof LocalDateTime ldt) {
-            timestampStr = ldt.format(TIMESTAMP_FORMATTER);
-        }
-
-        try {
-            TIMESTAMP_FORMATTER.parse(timestampStr);
-        } catch (DateTimeParseException e) {
-            processValidationError(String.format("В документе №%d в атрибут %s передано некорректное значение", seqN, attributeCode));
-        }
-    }
-
     private void validateDocSum(Object docSum, int seqN) {
         String attributeCode = DocumentAttributeCodes.DOC_SUM.getCode();
         String docSumStr = nullOrBlankObjectValidationAndToString(docSum, seqN, attributeCode);
@@ -324,49 +268,40 @@ public class DocumentInputRequestValidator {
         }
     }
 
-    private void validateDocStatus(Object docStatus, int seqN) {
-        String attributeCode = DocumentAttributeCodes.DOC_STATUS.getCode();
-        String docStatusStr = nullOrBlankObjectValidationAndToString(docStatus, seqN, attributeCode);
-
-        try {
-            int docStatusInt = Integer.parseInt(docStatusStr);
-
-            if (!(docStatusInt == 0) && !(docStatusInt == 1)) {
-                processValidationError(String.format("В документе №%d в атрибут %s передано некорректное значение", seqN, attributeCode));
-            }
-        } catch (NumberFormatException e) {
-            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение ", seqN, attributeCode));
-        }
-    }
-
     private void validateDocSKOSymbol(Object docSKOSymbol, int seqN) {
         String attributeCode = DocumentAttributeCodes.DOC_SKO_SYMBOL.getCode();
         String docSKOSymbolStr = nullOrBlankObjectValidationAndToString(docSKOSymbol, seqN, attributeCode);
+        int docSKOSymbolInt = parsingInt(docSKOSymbolStr, seqN, attributeCode);
 
+        if (docSKOSymbolInt < 0) {
+            processValidationError(String.format("В документе №%d в атрибут %s передано отрицательное значение", seqN, attributeCode));
+        }
+    }
+
+    private void validateDocStatus(Object docStatus, int seqN) {
+        String attributeCode = DocumentAttributeCodes.DOC_STATUS.getCode();
+        String docStatusStr = nullOrBlankObjectValidationAndToString(docStatus, seqN, attributeCode);
+        int docStatusInt = parsingInt(docStatusStr, seqN, attributeCode);
+
+        if (docStatusInt != 0 && docStatusInt != 1) {
+            processValidationError(String.format("В документе №%d в атрибут %s передано некорректное значение, допустимы 0 или 1", seqN, attributeCode));
+        }
+    }
+
+    private int parsingInt(String value, int seqN, String attributeCode) {
+        int valueInt = 0;
         try {
-            int docSKOSymbolInt = Integer.parseInt(docSKOSymbolStr);
-            if (docSKOSymbolInt < 0) {
-                processValidationError(String.format("В документе №%d в атрибут %s передано отрицательное значение", seqN, attributeCode));
-            }
+            valueInt = Integer.parseInt(value);
         } catch (NumberFormatException e) {
-            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение", seqN, attributeCode));
+            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение ", seqN, attributeCode));
         }
+        return valueInt;
     }
 
-    private void validateDocSign1(Object docSign1, int seqN) {
-        String attributeCode = DocumentAttributeCodes.DOC_SKO_SYMBOL.getCode();
-        String docSign1Str = nullOrBlankObjectValidationAndToString(docSign1, seqN, attributeCode);
+    private void validateDocSigns(Object object, int seqN, String attributeCode) {
+        String objectStr = nullOrBlankObjectValidationAndToString(object, seqN, attributeCode);
 
-        if (!FULL_NAME_PATTERN.matcher(docSign1Str).matches()) {
-            processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение", seqN, attributeCode));
-        }
-    }
-
-    private void validateDocSign2(Object docSign2, int seqN) {
-        String attributeCode = DocumentAttributeCodes.DOC_SKO_SYMBOL.getCode();
-        String docSign2Str = nullOrBlankObjectValidationAndToString(docSign2, seqN, attributeCode);
-
-        if (!FULL_NAME_PATTERN.matcher(docSign2Str).matches()) {
+        if (!FULL_NAME_PATTERN.matcher(objectStr).matches()) {
             processValidationError(String.format("В документе №%d в атрибут %s передано невалидное значение", seqN, attributeCode));
         }
     }

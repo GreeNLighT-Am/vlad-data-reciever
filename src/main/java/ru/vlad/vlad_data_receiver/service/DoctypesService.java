@@ -8,41 +8,32 @@ import ru.vlad.vlad_data_receiver.repository.DoctypesRepository;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class DoctypesService {
     private final DoctypesRepository docTypesRepository;
-    private final Map<String, DoctypesEntity> doctypesCache = new HashMap<>();
+    private Map<String, DoctypesEntity> doctypesCache = new HashMap<>();
 
     @PostConstruct
-    public void init() {
-        fillCache();
+    protected void init() {
+        getDoctypes();
     }
 
-    private void fillCache() {
-        docTypesRepository
+    private void getDoctypes() {
+        doctypesCache = docTypesRepository
                 .findAll()
-                .forEach(doctypesEntity ->
-                        doctypesCache.put(doctypesEntity.getCode(), doctypesEntity));
-    }
-
-    private void evictCache() {
-        doctypesCache.clear();
-    }
-
-    private void refreshCache() {
-        evictCache();
-        fillCache();
+                .stream()
+                .collect(Collectors.toMap(DoctypesEntity::getCode, Function.identity()));
     }
 
     public boolean isDoctypesValid(String code) {
         if (doctypesCache.containsKey(code)) {
             return true;
         }
-
-        refreshCache();
-
+        getDoctypes();
         return doctypesCache.containsKey(code);
     }
 }

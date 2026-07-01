@@ -8,41 +8,32 @@ import ru.vlad.vlad_data_receiver.repository.SourceSystemsRepository;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class SourceSystemsService {
     private final SourceSystemsRepository sourceSystemsRepository;
-    private final Map<String, SourceSystemsEntity> sourceSystemsCache = new HashMap<>();
+    private Map<String, SourceSystemsEntity> sourceSystemsCache = new HashMap<>();
 
     @PostConstruct
-    public void init() {
-        fillCache();
+    protected void init() {
+        getSourceSystems();
     }
 
-    private void fillCache() {
-        sourceSystemsRepository
+    private void getSourceSystems() {
+        sourceSystemsCache = sourceSystemsRepository
                 .findAll()
-                .forEach(sourceSystemsEntity ->
-                        sourceSystemsCache.put(sourceSystemsEntity.getCode(), sourceSystemsEntity));
-    }
-
-    private void evictCache() {
-        sourceSystemsCache.clear();
-    }
-
-    private void refreshCache() {
-        evictCache();
-        fillCache();
+                .stream()
+                .collect(Collectors.toMap(SourceSystemsEntity::getCode, Function.identity()));
     }
 
     public boolean isSourceSystemValid(String code) {
         if (sourceSystemsCache.containsKey(code)) {
             return true;
         }
-
-        refreshCache();
-
+        getSourceSystems();
         return sourceSystemsCache.containsKey(code);
     }
 }
