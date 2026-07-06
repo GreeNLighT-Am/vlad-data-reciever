@@ -16,8 +16,7 @@ public enum ContentFormats {
     XLS("xls"),
     XLSX("xlsx"),
     DOC("doc"),
-    DOCX("docx"),
-    JSON("json");
+    DOCX("docx");
 
     private final String value;
 

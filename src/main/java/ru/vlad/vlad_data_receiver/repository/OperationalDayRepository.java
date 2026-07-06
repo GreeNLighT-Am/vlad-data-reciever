@@ -15,4 +15,5 @@ public interface OperationalDayRepository extends CrudRepository<OperationalDayE
     @Modifying
     int deleteByDateBetween(LocalDate start, LocalDate end);
 
+    OperationalDayEntity findByDate(LocalDate date);
 }

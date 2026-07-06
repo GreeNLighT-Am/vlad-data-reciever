@@ -5,6 +5,19 @@ spring:
     url: jdbc:mysql://localhost:3306/vlad_db
     username: root
     password: ${DB_PASSWORD}
+  cache:
+    type: caffeine
+    cache-names:
+      - unloadingCache
+      - operationalDayCache
+    caffeine:
+      spec: expireAfterWrite=60s,maximumSize=1000
+
+app:
+  storage:
+    base-path: ./storage/documents
+    archive-format: .zip
+    date-format: yyyyMMdd
 
 logging:
   level:

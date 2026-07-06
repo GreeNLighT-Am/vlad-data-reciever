@@ -13,10 +13,12 @@ public class DocumentInputRequestService {
 
     private final XmlParserService xmlParserService;
     private final DocumentInputRequestValidator documentInputRequestValidator;
+    private final BundleProcessingService bundleProcessingService;
 
     public String processRequest(String xmlRequest) {
         DocumentInputRequest document = xmlParserService.parseXml(xmlRequest);
         documentInputRequestValidator.validate(document);
+        bundleProcessingService.processBundle(document);
 
         return document.getID();
     }

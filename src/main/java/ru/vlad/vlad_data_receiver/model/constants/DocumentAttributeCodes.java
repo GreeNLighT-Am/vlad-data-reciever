@@ -20,7 +20,9 @@ public enum DocumentAttributeCodes {
     DOC_SUM("DocSum", false),
     DOC_SKO_SYMBOL("DocSKOSymbol", false),
     DOC_SIGN_1("DocSign1", false),
-    DOC_SIGN_2("DocSign2", false);
+    DOC_SIGN_2("DocSign2", false),
+    DOC_SIGN_3("DocSign3", false);
+
 
     private final String code;
     private final boolean required;

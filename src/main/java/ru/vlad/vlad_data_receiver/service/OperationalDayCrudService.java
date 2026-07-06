@@ -33,4 +33,9 @@ public class OperationalDayCrudService {
         operationalDayRepository.saveAll(operationalDays);
         log.debug("Выполнена пакетная вставка операционных дней");
     }
+
+    @Transactional(readOnly = true)
+    public OperationalDayEntity findByDate(LocalDate date) {
+        return operationalDayRepository.findByDate(date);
+    }
 }
