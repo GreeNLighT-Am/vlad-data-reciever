@@ -12,7 +12,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -29,11 +29,12 @@ public class BundleSaver {
     @Value("${app.storage.archive-format}")
     private String archiveFormat;
 
-    public void process(Long bundleId, List<DocumentEntity> documentEntities, List<Document> documents, String docCategory) {
-        String currentDate = LocalDateTime.now().format(DateTimeFormatter.ofPattern(datePattern));
+    public void process(Long savedBundleId, List<DocumentEntity> savedDocuments, List<Document> allDocumentsFromRequest,
+                        String docCategory, LocalDate documentOperationalDayDate) {
+        String currentDate = documentOperationalDayDate.format(DateTimeFormatter.ofPattern(datePattern));
         Path storagePath = Paths.get(basePath, currentDate, docCategory);
 
-        String zipFileName = bundleId + archiveFormat;
+        String zipFileName = savedBundleId + archiveFormat;
         Path zipPath = storagePath.resolve(zipFileName);
         try {
             createDirectories(storagePath);
@@ -42,8 +43,8 @@ public class BundleSaver {
                  ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
                 log.info("Создан архив: {}", zipFileName);
 
-                for (int i = 0; i < documentEntities.size() && i < documents.size(); i++) {
-                    addFileToArchive(zipOutputStream, documentEntities.get(i), documents.get(i));
+                for (int i = 0; i < savedDocuments.size() && i < allDocumentsFromRequest.size(); i++) {
+                    addFileToArchive(zipOutputStream, savedDocuments.get(i), allDocumentsFromRequest.get(i));
                 }
 
                 zipOutputStream.finish();
@@ -56,13 +57,13 @@ public class BundleSaver {
         }
     }
 
-    private void addFileToArchive(ZipOutputStream zipOutputStream, DocumentEntity documentEntity, Document document) throws IOException {
-        String extension = documentEntity.getFormat().toLowerCase();
-        String fileName = documentEntity.getId() + "." + extension;
+    private void addFileToArchive(ZipOutputStream zipOutputStream, DocumentEntity savedDocument, Document documentFromRequest) throws IOException {
+        String extension = savedDocument.getFormat().toLowerCase();
+        String fileName = String.format("%d.%s", savedDocument.getId(), extension);
 
         ZipEntry zipEntry = new ZipEntry(fileName);
         zipOutputStream.putNextEntry(zipEntry);
-        zipOutputStream.write(document.getDocumentBody().getContent().get(0).getData());
+        zipOutputStream.write(documentFromRequest.getDocumentBody().getContent().get(0).getData());
 
         zipOutputStream.closeEntry();
         log.debug("В архив добавлен файл: {}", fileName);

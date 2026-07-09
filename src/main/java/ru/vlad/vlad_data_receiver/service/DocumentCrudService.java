@@ -7,6 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.vlad.vlad_data_receiver.entity.DocumentEntity;
 import ru.vlad.vlad_data_receiver.repository.DocumentRepository;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -14,7 +16,8 @@ public class DocumentCrudService {
     private final DocumentRepository documentRepository;
 
     @Transactional
-    public DocumentEntity save(DocumentEntity documentEntity) {
-        return documentRepository.save(documentEntity);
+    public void saveAll(List<DocumentEntity> documentEntity) {
+        documentRepository.saveAll(documentEntity);
+        log.debug("Выполнена пакетная вставка документов");
     }
 }

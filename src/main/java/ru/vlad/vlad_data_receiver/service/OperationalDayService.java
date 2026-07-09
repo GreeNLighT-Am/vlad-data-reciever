@@ -15,8 +15,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class OperationalDayService {
-
-    private final OperationalDayCrudService crudService;
+    private final OperationalDayCrudService operationalDayCrudService;
 
     @Transactional
     public void insertOperDays() {
@@ -26,7 +25,7 @@ public class OperationalDayService {
                 .with(TemporalAdjusters.lastDayOfMonth());
 
         int totalDaysInNextMonth = lastDayOfNextMonth.getDayOfMonth();
-        int existingDaysCount = crudService.countByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
+        int existingDaysCount = operationalDayCrudService.countByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
 
         try {
             if (existingDaysCount == 0) {
@@ -38,7 +37,7 @@ public class OperationalDayService {
                 log.warn("Опердни на следующий месяц есть, но не на весь месяц (найдено {} из {}). Перезапускаем заполнение...",
                         existingDaysCount, totalDaysInNextMonth);
 
-                crudService.deleteByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
+                operationalDayCrudService.deleteByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
 
                 fillOperationalDays(firstDayOfNextMonth, lastDayOfNextMonth);
             }
@@ -60,7 +59,7 @@ public class OperationalDayService {
             loopDate = loopDate.plusDays(1);
         }
 
-        crudService.saveAll(daysToInsert);
+        operationalDayCrudService.saveAll(daysToInsert);
         log.info("Успешно заполнены опердни на весь следующий месяц с {} по {}.", firstDayOfNextMonth, lastDayOfNextMonth);
     }
 }

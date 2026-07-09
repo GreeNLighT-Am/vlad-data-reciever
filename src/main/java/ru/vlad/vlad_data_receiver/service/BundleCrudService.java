@@ -19,7 +19,7 @@ public class BundleCrudService {
     }
 
     @Transactional
-    public void update(BundleEntity bundleEntity) {
-        bundleRepository.save(bundleEntity);
+    public void updateStatus(Long id, String status) {
+        bundleRepository.updateStatus(id, status);
     }
 }
