@@ -10,7 +10,6 @@ import ru.vlad.vlad_data_receiver.validator.DocumentInputRequestValidator;
 @Service
 @RequiredArgsConstructor
 public class DocumentInputRequestService {
-
     private final XmlParserService xmlParserService;
     private final DocumentInputRequestValidator documentInputRequestValidator;
     private final BundleProcessingService bundleProcessingService;

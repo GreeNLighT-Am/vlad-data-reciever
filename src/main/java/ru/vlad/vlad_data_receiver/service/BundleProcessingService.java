@@ -54,11 +54,8 @@ public class BundleProcessingService {
         String unloadingRequestId = documentInputRequest.getID();
         List<Document> allDocumentsFromRequest = documentInputRequest.getDocument();
         DocumentCard documentCardOfFirstDocumentFromRequest = allDocumentsFromRequest.get(0).getDocumentCard();
-        // В ходе приема бандла опердень выгрузки бандла определяем из аттрибута DocDate, а код подразделения (филиала) из DocAccount первого документа бандла.
         LocalDate documentOperationalDayDate = getOperationalDayDate(documentCardOfFirstDocumentFromRequest).toLocalDate();
 
-        // 4.1 Сервис вычитывает опердень выгрузки и считывает его статус из базы.
-        // В случае, если статус = UNLOADING_RECEIVE_STOPPED (2), сервис прекращает обработку бандла и продолжает ожидать поступление других запросов
         OperationalDayEntity operationalDay = operationalDayCrudService.findByDate(documentOperationalDayDate);
         if (operationalDay.getStateId() == 2) {
             log.error("Для выгрузки с ID={} опердень находится в статусе UNLOADING_RECEIVE_STOPPED", unloadingRequestId);
@@ -68,8 +65,6 @@ public class BundleProcessingService {
         LocalDateTime documentTimeStamp = documentInputRequest.getTimeStamp();
         String odDocType = documentInputRequest.getOdDocType();
 
-        // 4.2 Сервис проверяет по аттрибуту ID из принятого файла Document_Input_Request.xml наличие в кэше (срок хранения 1 минута)
-        // записи о выгрузке с таким же значением unloading_request_id.
         UnloadingEntity unloading = unloadingCache.getIfPresent(unloadingRequestId);
 
         if (unloading != null) {
@@ -89,14 +84,10 @@ public class BundleProcessingService {
             );
 
             if (inserted > 0) {
-                // 4.3.1 При успешном создании выгрузки сервис записывает ее параметры в кэш и использует для создания бандла
                 log.info("Новая выгрузка для запроса с ID={} успешно записана в БД", unloadingRequestId);
                 unloading = unloadingCrudService.findByUnloadingRequestId(unloadingRequestId);
                 unloadingCache.put(unloadingRequestId, unloading);
             } else {
-                // 4.3.2. При неуспешном создании выгрузки (unique constraint violation-проверка в БД на существующую выгрузку)
-                // сервис делает запрос к таблице unloading в БД по unloaing_request_id,
-                // записывает параметры выгрузки в кэш и использует их для нового бандла
                 log.info("Не удалось записать выгрузку для запроса с ID={} в БД, делаем запрос к БД", unloadingRequestId);
                 unloading = unloadingCrudService.findByUnloadingRequestId(unloadingRequestId);
 
@@ -110,14 +101,11 @@ public class BundleProcessingService {
             }
         }
 
-        // 4.5 В случае, если статус выгрузки меньше нуля,
-        // то сервис прекращает обработку бандла и возвращается слушать очередь системы источника
         if (unloading.getStateId() < 0) {
             log.error("У выгрузки для запроса с ID {} статус меньше 0, прекращаем обработку", unloadingRequestId);
             return;
         }
 
-        // 5. Сервис создает запись в таблице bundle со статусом "Новый" (NEW_BUNDLE)
         BundleEntity bundleEntity = BundleEntity.builder()
                 .status(BundleStatuses.NEW_BUNDLE.getStatus())
                 .documentCount(unloading.getTotalDocs())
@@ -129,11 +117,8 @@ public class BundleProcessingService {
 
         Long savedBundleId = bundleCrudService.save(bundleEntity).getId();
 
-        // 6. В случае отсутствия ошибок сервис переходит к сохранению документов на диск и метаданных в БД (Use Case 03)
         log.info("Начало обработки бандла ID={} для выгрузки с ID={}", savedBundleId, unloadingRequestId);
 
-        // 1. Сервис записывает информацию из бандла в БД:
-        //  1.1 Метаданные в БД: таблица document
         List<DocumentEntity> savedDocuments = new ArrayList<>();
         try {
             for (Document documentFromRequest : allDocumentsFromRequest) {
@@ -155,21 +140,14 @@ public class BundleProcessingService {
             return;
         }
 
-        // 2. Сервис формирует ZIP файл c именем {id бандла}.zip, содержащий все декодированные из base64 файлы документов бандла.
-        // 2.1 Имя файла каждого документа - {id документа}.{расширение}
-        // 3. Сервис сохраняет в папке формата {YYYYMMDD}/{Тип документов} zip-файл со всеми документами бандла.
         try {
             bundleSaver.process(savedBundleId, savedDocuments, allDocumentsFromRequest, odDocType, documentOperationalDayDate);
         } catch (StorageException e) {
-            // 4. В случае возникновения ошибок сохранения в CEPH:
-            // - Сервис переводит бандл в статус "Ошибка сохранения на диске" (SAVING_FILER_ERROR) в БД
-            // - Сервис возвращается к ожиданию сообщений по RESTу.
             setBundleStatus(savedBundleId, BundleStatuses.SAVING_FILER_ERROR);
             log.error("Ошибка сохранения бандла для выгрузки с ID={}: {}", unloadingRequestId, e.getMessage(), e.getCause());
             return;
         }
 
-        // После сохранения всей информации бандла сервис меняет значение статуса бандл на "Сохранен" (BUNDLE_SAVED)
         setBundleStatus(savedBundleId, BundleStatuses.BUNDLE_SAVED);
         log.info("Бандл для выгрузки с ID={} успешно сохранён", unloadingRequestId);
     }

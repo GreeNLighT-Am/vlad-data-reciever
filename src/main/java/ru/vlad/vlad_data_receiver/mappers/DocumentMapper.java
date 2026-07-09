@@ -10,10 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Mapper(
-        componentModel = "spring",
-        imports = {DocumentAttributeCodes.class}
-)
+@Mapper(componentModel = "spring", imports = {DocumentAttributeCodes.class})
 public interface DocumentMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "bundleId", source = "bundleId")

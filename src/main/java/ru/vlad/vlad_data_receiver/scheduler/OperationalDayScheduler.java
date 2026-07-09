@@ -10,7 +10,6 @@ import ru.vlad.vlad_data_receiver.service.OperationalDayService;
 @Component
 @RequiredArgsConstructor
 public class OperationalDayScheduler {
-
     private final OperationalDayService operationalDayService;
 
     @Scheduled(cron = "${insert-operdays-scheduler}")

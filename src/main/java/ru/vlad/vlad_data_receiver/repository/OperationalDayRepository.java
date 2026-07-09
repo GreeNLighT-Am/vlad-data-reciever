@@ -9,7 +9,6 @@ import java.time.LocalDate;
 
 @Repository
 public interface OperationalDayRepository extends CrudRepository<OperationalDayEntity, Long> {
-
     int countByDateBetween(LocalDate start, LocalDate end);
 
     @Modifying

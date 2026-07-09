@@ -14,7 +14,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class OperationalDayCrudService {
-
     private final OperationalDayRepository operationalDayRepository;
 
     @Transactional(readOnly = true)

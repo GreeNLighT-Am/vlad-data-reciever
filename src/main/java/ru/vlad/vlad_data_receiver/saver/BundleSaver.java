@@ -21,7 +21,6 @@ import java.util.zip.ZipOutputStream;
 @Slf4j
 @Component
 public class BundleSaver {
-
     @Value("${app.storage.base-path}")
     private String basePath;
     @Value("${app.storage.date-format}")
