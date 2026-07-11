@@ -10,18 +10,19 @@ import ru.vlad.vlad_data_receiver.exceptions.XmlParsingException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final String ERROR_MESSAGE = "ErrorUnloadingEvent";
 
     @ExceptionHandler(XmlParsingException.class)
     public ResponseEntity<String> handleXmlParsingException(XmlParsingException e) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(e.getMessage());
+                .body(ERROR_MESSAGE);
     }
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<String> handleValidationException(ValidationException e) {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
-                .body(e.getMessage());
+                .body(ERROR_MESSAGE);
     }
 }

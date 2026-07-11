@@ -15,13 +15,13 @@ public interface UnloadingRepository extends ListCrudRepository<UnloadingEntity,
 
     @Modifying
     @Query("""
-        INSERT IGNORE INTO unloading 
-            (unloading_request_id, source_system_code, date, total_docs, 
-             state_id, operational_day_id, department_number, doc_category)
-        VALUES 
-            (:unloadingRequestId, :sourceSystemCode, :date, :totalDocs, 
-             :stateId, :operationalDayId, :departmentNumber, :docCategory)
-        """)
+            INSERT IGNORE INTO unloading 
+                (unloading_request_id, source_system_code, date, total_docs, 
+                 state_id, operational_day_id, department_number, doc_category)
+            VALUES 
+                (:unloadingRequestId, :sourceSystemCode, :date, :totalDocs, 
+                 :stateId, :operationalDayId, :departmentNumber, :docCategory)
+            """)
     int insertIfNotExists(@Param("unloadingRequestId") String unloadingRequestId,
                           @Param("sourceSystemCode") String sourceSystemCode,
                           @Param("date") LocalDateTime date,
@@ -30,4 +30,12 @@ public interface UnloadingRepository extends ListCrudRepository<UnloadingEntity,
                           @Param("operationalDayId") Long operationalDayId,
                           @Param("departmentNumber") Integer departmentNumber,
                           @Param("docCategory") String docCategory);
+
+    @Modifying
+    @Query("INSERT IGNORE INTO unloading (unloading_request_id, state_id) VALUES (:unloadingRequestId, :stateId)")
+    int setUnloadingStateId(@Param("unloadingRequestId") String unloadingRequestId, @Param("stateId") Long stateId);
+
+    @Modifying
+    @Query("UPDATE unloading SET state_id = :stateId WHERE unloading_request_id = :unloadingRequestId")
+    void updateUnloadingStateId(@Param("unloadingRequestId") String unloadingRequestId, @Param("stateId") Long stateId);
 }

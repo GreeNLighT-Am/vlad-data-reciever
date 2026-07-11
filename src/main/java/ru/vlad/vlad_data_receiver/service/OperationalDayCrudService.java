@@ -2,6 +2,7 @@ package ru.vlad.vlad_data_receiver.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.vlad.vlad_data_receiver.entity.OperationalDayEntity;
@@ -34,7 +35,9 @@ public class OperationalDayCrudService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(value = "operationalDayCache", key = "#date", unless = "#result == null")
     public OperationalDayEntity findByDate(LocalDate date) {
+        log.info("Операционный день на {} не найден в кэше, делаем запрос к БД", date);
         return operationalDayRepository.findByDate(date);
     }
 }

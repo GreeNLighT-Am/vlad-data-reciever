@@ -9,6 +9,7 @@ spring:
     type: caffeine
     cache-names:
       - unloadingCache
+      - operationalDayCache
     caffeine:
       spec: expireAfterWrite=60s,maximumSize=1000
 

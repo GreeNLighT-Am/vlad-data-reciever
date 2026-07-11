@@ -20,4 +20,9 @@ public class DocumentCrudService {
         documentRepository.saveAll(documentEntity);
         log.debug("Выполнена пакетная вставка документов");
     }
+
+    @Transactional(readOnly = true)
+    public int countByUnloadingRequestId(String unloadingRequestId) {
+        return documentRepository.countByUnloadingRequestId(unloadingRequestId);
+    }
 }

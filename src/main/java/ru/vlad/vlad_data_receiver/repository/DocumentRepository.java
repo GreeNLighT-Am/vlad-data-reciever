@@ -6,4 +6,5 @@ import ru.vlad.vlad_data_receiver.entity.DocumentEntity;
 
 @Repository
 public interface DocumentRepository extends CrudRepository<DocumentEntity, Long> {
+    int countByUnloadingRequestId(String unloadingRequestId);
 }

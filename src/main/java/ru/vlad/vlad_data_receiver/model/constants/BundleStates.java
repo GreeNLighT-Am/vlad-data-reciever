@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum BundleStatuses {
+public enum BundleStates {
     NEW_BUNDLE("NEW_BUNDLE"),
     SAVING_METADATA_ERROR("SAVING_METADATA_ERROR"),
     SAVING_FILER_ERROR("SAVING_FILER_ERROR"),

@@ -5,9 +5,10 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum UnloadingStatuses {
-    BAD_UNLOADING(-1L),
-    GOOD_UNLOADING(1L);
+public enum UnloadingStates {
+    UNLOADING_ERROR(-1L),
+    NEW_UNLOADING(1L),
+    UNLOADING_SAVED(2L);
 
-    private final Long status;
+    private final Long stateId;
 }

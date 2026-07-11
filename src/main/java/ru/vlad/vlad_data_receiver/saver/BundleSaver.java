@@ -51,7 +51,6 @@ public class BundleSaver {
                 log.info("Архив {} сохранён по пути: {}", zipFileName, zipPath);
             }
         } catch (IOException e) {
-            log.error("Ошибка при создании ZIP-архива", e);
             throw new StorageException("Не удалось создать ZIP-архив: " + e.getMessage(), e);
         }
     }
