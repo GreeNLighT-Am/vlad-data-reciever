@@ -24,7 +24,7 @@ public class DocumentInputRequestController {
             HttpServletRequest servletRequest) {
 
         log.info("Получен запрос от: {}", servletRequest.getRemoteAddr());
-        log.debug("Тело запроса: {}", xmlRequest);
+//        log.debug("Тело запроса: {}", xmlRequest);
 
         String documentId = documentInputRequestService.processRequest(xmlRequest);
 

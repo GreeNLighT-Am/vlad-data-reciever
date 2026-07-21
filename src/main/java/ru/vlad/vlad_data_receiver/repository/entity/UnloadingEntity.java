@@ -1,4 +1,4 @@
-package ru.vlad.vlad_data_receiver.entity;
+package ru.vlad.vlad_data_receiver.repository.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -28,7 +28,7 @@ public class UnloadingEntity {
 
     private Integer totalDocs;
 
-    private Long stateId;
+    private int stateId;
 
     private Long operationalDayId;
 

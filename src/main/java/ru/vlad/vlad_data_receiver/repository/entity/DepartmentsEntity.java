@@ -1,4 +1,4 @@
-package ru.vlad.vlad_data_receiver.entity;
+package ru.vlad.vlad_data_receiver.repository.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,21 +8,23 @@ import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "doctypes", schema = "vlad_db")
-public class DoctypesEntity {
+@Table(name = "departments", schema = "vlad_db")
+public class DepartmentsEntity {
     @Id
-    private String code;
+    private Integer code;
 
     private String name;
 
-    private Long groupId;
+    private LocalDateTime createDate;
 
-    private BigDecimal lifeTime;
+    private LocalDateTime modifyDate;
+
+    private Boolean isActive;
 }

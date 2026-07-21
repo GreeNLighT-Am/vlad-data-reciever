@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.entity.DocumentEntity;
+import ru.vlad.vlad_data_receiver.repository.entity.DocumentEntity;
 import ru.vlad.vlad_data_receiver.repository.DocumentRepository;
 
 import java.util.List;

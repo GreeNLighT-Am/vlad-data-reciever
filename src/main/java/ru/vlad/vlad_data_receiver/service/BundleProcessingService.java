@@ -5,158 +5,149 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.relational.core.conversion.DbActionExecutionException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.entity.BundleEntity;
-import ru.vlad.vlad_data_receiver.entity.DocumentEntity;
-import ru.vlad.vlad_data_receiver.entity.OperationalDayEntity;
-import ru.vlad.vlad_data_receiver.entity.UnloadingEntity;
-import ru.vlad.vlad_data_receiver.exceptions.StorageException;
-import ru.vlad.vlad_data_receiver.mappers.DocumentMapper;
+import ru.vlad.vlad_data_receiver.exceptions.BundleProcessingException;
+import ru.vlad.vlad_data_receiver.repository.entity.BundleEntity;
+import ru.vlad.vlad_data_receiver.repository.entity.DocumentEntity;
+import ru.vlad.vlad_data_receiver.repository.entity.OperationalDayEntity;
+import ru.vlad.vlad_data_receiver.repository.entity.UnloadingEntity;
+import ru.vlad.vlad_data_receiver.exceptions.FileSavingException;
+import ru.vlad.vlad_data_receiver.mapper.DocumentMapper;
 import ru.vlad.vlad_data_receiver.model.constants.OdDocTypes;
 import ru.vlad.vlad_data_receiver.model.constants.OperationalDayStates;
 import ru.vlad.vlad_data_receiver.model.constants.UnloadingStates;
-import ru.vlad.vlad_data_receiver.saver.BundleSaver;
 import ru.vlad.vlad_data_receiver.model.constants.BundleStates;
-import ru.vlad.vlad_data_receiver.model.constants.DocumentAttributeCodes;
 import ru.vlad.vlad_data_receiver.parser.documents.Document;
 import ru.vlad.vlad_data_receiver.parser.documents.DocumentCard;
 import ru.vlad.vlad_data_receiver.parser.documents.DocumentInputRequest;
+import ru.vlad.vlad_data_receiver.util.DocumentAttributeExtractor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class BundleProcessingService {
-    private final BundleSaver bundleSaver;
+    private final ArchiveProcessingService archiveProcessingService;
     private final DocumentCrudService documentCrudService;
     private final BundleCrudService bundleCrudService;
     private final UnloadingCrudService unloadingCrudService;
     private final OperationalDayCrudService operationalDayCrudService;
     private final DocumentMapper documentMapper;
+    private static final String ERROR_MESSAGE = "Ошибка обработки бандла";
 
     @Transactional
     public void processBundle(DocumentInputRequest documentInputRequest) {
         String unloadingRequestId = documentInputRequest.getID();
         List<Document> allDocumentsFromRequest = documentInputRequest.getDocument();
-        DocumentCard documentCardOfFirstDocumentFromRequest = allDocumentsFromRequest.get(0).getDocumentCard();
-        LocalDate documentOperationalDayDate = getOperationalDayDate(documentCardOfFirstDocumentFromRequest).toLocalDate();
+        DocumentCard firstDocCard = allDocumentsFromRequest.get(0).getDocumentCard();
+        LocalDate operationalDayDate = DocumentAttributeExtractor.getOperationalDayDate(firstDocCard);
 
-        OperationalDayEntity operationalDay = operationalDayCrudService.findByDate(documentOperationalDayDate);
-        if (operationalDay == null) {
-            log.error("Для выгрузки с ID={} не найден операционный день", unloadingRequestId);
-            return;
-        } else if (operationalDay.getStateId().equals(OperationalDayStates.UNLOADING_RECEIVE_STOPPED.getStateId())) {
-            log.error("Для выгрузки с ID={} операционный день находится в статусе UNLOADING_RECEIVE_STOPPED", unloadingRequestId);
-            return;
+        OperationalDayEntity operationalDay = operationalDayCrudService.findByDate(operationalDayDate, unloadingRequestId);
+        if (operationalDay.getStateId() != OperationalDayStates.UNLOADING_RECEIVE_AVAILABLE.getStateId()) {
+            processBundleProcessingError(String.format("Для запроса с ID=%s операционный день закрыт для приёма новых выгрузок, прекращаем обработку бандла", unloadingRequestId));
         }
 
         LocalDateTime documentTimeStamp = documentInputRequest.getTimeStamp();
         String odDocType = documentInputRequest.getOdDocType();
         int totalDocs = documentInputRequest.getTotalDocs();
 
-        UnloadingEntity unloading = unloadingCrudService.getOrCreateUnloading(unloadingRequestId,
-                getSourceSystemCode(documentCardOfFirstDocumentFromRequest),
-                documentTimeStamp,
-                totalDocs,
-                UnloadingStates.NEW_UNLOADING.getStateId(),
-                operationalDay.getId(),
-                getDepartmentNumber(documentCardOfFirstDocumentFromRequest),
-                odDocType);
+        processUnloading(unloadingRequestId, firstDocCard, documentTimeStamp, totalDocs, operationalDay.getId(), odDocType);
 
-        if (unloading == null) {
-            log.error("Для запроса с ID={} не найдена в кеше, а также не удалось создать новую выгрузку или получить её из БД", unloadingRequestId);
-            return;
+        Long savedBundleId = createNewBundle(documentInputRequest, allDocumentsFromRequest.size(), unloadingRequestId, odDocType, operationalDayDate);
+
+        log.debug("Начало обработки бандла с ID={} для выгрузки с ID={}", savedBundleId, unloadingRequestId);
+        try {
+            int documentsSaved = saveDocuments(allDocumentsFromRequest, documentTimeStamp, savedBundleId, unloadingRequestId, operationalDayDate, odDocType);
+
+            bundleCrudService.updateStatus(savedBundleId, BundleStates.BUNDLE_SAVED.getStatus());
+            log.info("Бандл с ID={} для выгрузки с ID={} успешно сохранён. Статус бандла переведён в BUNDLE_SAVED", savedBundleId, unloadingRequestId);
+
+            setUnloadingStatus(unloadingRequestId, documentsSaved, totalDocs);
+        } catch (DbActionExecutionException e) {
+            handleBundleSavingError(savedBundleId, unloadingRequestId, e, BundleStates.SAVING_METADATA_ERROR);
+        } catch (FileSavingException e) {
+            handleBundleSavingError(savedBundleId, unloadingRequestId, e, BundleStates.SAVING_FILE_ERROR);
         }
+    }
 
-        if (unloading.getStateId() < 0) {
-            log.error("У выгрузки для запроса с ID {} статус меньше 0, прекращаем обработку", unloadingRequestId);
-            return;
-        } else if (unloading.getStateId().equals(UnloadingStates.UNLOADING_SAVED.getStateId())) {
-            log.error("Выгрузка с ID={} была успешно сохранена ранее", unloadingRequestId);
-            return;
-        }
+    private int saveDocuments(List<Document> allDocumentsFromRequest, LocalDateTime documentTimeStamp, Long savedBundleId, String unloadingRequestId, LocalDate operationalDayDate, String odDocType) {
+        List<DocumentEntity> savedDocuments = allDocumentsFromRequest.stream()
+                .map(doc -> documentMapper.toDocumentEntity(
+                        doc,
+                        documentTimeStamp,
+                        savedBundleId,
+                        unloadingRequestId,
+                        operationalDayDate
+                ))
+                .collect(Collectors.toList());
+        documentCrudService.saveAll(savedDocuments);
 
+        int documentsSaved = savedDocuments.size();
+        log.debug("Сохранено {} документов в БД", documentsSaved);
+
+        archiveProcessingService.process(savedBundleId, savedDocuments, allDocumentsFromRequest, odDocType, operationalDayDate);
+        return documentsSaved;
+    }
+
+    private void processBundleProcessingError(String errorMessage) {
+        log.error(errorMessage);
+        throw new BundleProcessingException(ERROR_MESSAGE);
+    }
+
+    private void handleBundleSavingError(Long bundleId, String unloadingRequestId, Exception e, BundleStates errorState) {
+        bundleCrudService.updateStatus(bundleId, errorState.getStatus());
+        processBundleProcessingError(String.format(
+                "Ошибка сохранения бандла для выгрузки с ID=%s: %s. Статус бандла переведён в %s",
+                unloadingRequestId, e.getMessage(), errorState.name()
+        ));
+    }
+
+    private Long createNewBundle(DocumentInputRequest documentInputRequest, int documentCount, String unloadingRequestId, String odDocType, LocalDate documentOperationalDayDate) {
         BundleEntity bundleEntity = BundleEntity.builder()
                 .status(BundleStates.NEW_BUNDLE.getStatus())
-                .documentCount(allDocumentsFromRequest.size())
+                .documentCount(documentCount)
                 .bundleNum(documentInputRequest.getBlockNum())
                 .unloadingRequestId(unloadingRequestId)
                 .type(OdDocTypes.getType(odDocType))
                 .od_p(documentOperationalDayDate)
                 .build();
 
-        Long savedBundleId = bundleCrudService.save(bundleEntity).getId();
+        return bundleCrudService.save(bundleEntity).getId();
+    }
 
-        log.info("Начало обработки бандла ID={} для выгрузки с ID={}", savedBundleId, unloadingRequestId);
+    private void processUnloading(String unloadingRequestId, DocumentCard documentCardOfFirstDocumentFromRequest, LocalDateTime documentTimeStamp, int totalDocs, Long operationalDayId, String odDocType) {
+        UnloadingEntity unloading = unloadingCrudService.getOrCreateUnloading(
+                unloadingRequestId,
+                DocumentAttributeExtractor.getSourceSystemCode(documentCardOfFirstDocumentFromRequest),
+                documentTimeStamp,
+                totalDocs,
+                UnloadingStates.NEW_UNLOADING.getStateId(),
+                operationalDayId,
+                DocumentAttributeExtractor.getDepartmentNumber(documentCardOfFirstDocumentFromRequest),
+                odDocType
+        );
 
-        List<DocumentEntity> savedDocuments = new ArrayList<>();
-        try {
-            for (Document documentFromRequest : allDocumentsFromRequest) {
-                DocumentEntity entity = documentMapper.toDocumentEntity(
-                        documentFromRequest,
-                        documentTimeStamp,
-                        savedBundleId,
-                        unloadingRequestId,
-                        documentOperationalDayDate
-                );
-                savedDocuments.add(entity);
-            }
-
-            documentCrudService.saveAll(savedDocuments);
-            log.info("Сохранено {} документов в БД", savedDocuments.size());
-        } catch (DbActionExecutionException e) {
-            setBundleStatus(savedBundleId, BundleStates.SAVING_METADATA_ERROR);
-            log.error("Ошибка сохранения бандла для выгрузки с ID={}: {}. Статус бандла переведён в SAVING_METADATA_ERROR", unloadingRequestId, e.getMessage(), e);
-            return;
+        int unloadingStateId = unloading.getStateId();
+        if (unloadingStateId < 0) {
+            processBundleProcessingError(String.format("У выгрузки для запроса с ID=%s статус меньше 0, прекращаем обработку бандла", unloadingRequestId));
+        } else if (unloadingStateId == UnloadingStates.UNLOADING_SAVED.getStateId()) {
+            processBundleProcessingError(String.format("Выгрузка с ID=%s уже была успешно сохранена ранее, прекращаем обработку бандла", unloadingRequestId));
         }
+    }
 
-        try {
-            bundleSaver.process(savedBundleId, savedDocuments, allDocumentsFromRequest, odDocType, documentOperationalDayDate);
-        } catch (StorageException e) {
-            setBundleStatus(savedBundleId, BundleStates.SAVING_FILER_ERROR);
-            log.error("Ошибка сохранения бандла для выгрузки с ID={}: {}. Статус бандла переведён в SAVING_FILER_ERROR", unloadingRequestId, e.getMessage(), e);
-            return;
-        }
-
-        setBundleStatus(savedBundleId, BundleStates.BUNDLE_SAVED);
-        log.info("Бандл для выгрузки с ID={} успешно сохранён. Статус бандла переведён в BUNDLE_SAVED", unloadingRequestId);
-
-        if (savedDocuments.size() == totalDocs || documentCrudService.countByUnloadingRequestId(unloadingRequestId) == totalDocs) {
+    private void setUnloadingStatus(String unloadingRequestId, int documentsSaved, int totalDocs) {
+        int docSavedInDb = bundleCrudService.getTotalCompletedDocumentsCountByUnloadingRequestId(unloadingRequestId);
+        if (documentsSaved == totalDocs || docSavedInDb == totalDocs) {
             unloadingCrudService.updateUnloadingStateId(unloadingRequestId, UnloadingStates.UNLOADING_SAVED);
             log.info("Получены все документы для выгрузки с ID={}. Статус выгрузки переведён в UNLOADING_SAVED", unloadingRequestId);
+        } else if (documentsSaved > totalDocs || docSavedInDb > totalDocs) {
+            unloadingCrudService.updateUnloadingStateId(unloadingRequestId, UnloadingStates.UNLOADING_ERROR);
+            processBundleProcessingError(String.format("Для выгрузки с ID=%s передано больше документов чем ожидается. Статус выгрузки переведён в UNLOADING_ERROR", unloadingRequestId));
         } else {
             log.info("Получена часть документов для выгрузки с ID={}", unloadingRequestId);
         }
-    }
-
-    private void setBundleStatus(Long savedBundleId, BundleStates bundleStatus) {
-        bundleCrudService.updateStatus(savedBundleId, bundleStatus.getStatus());
-    }
-
-    private LocalDateTime getOperationalDayDate(DocumentCard documentCard) {
-        return documentCard.getVariableAttribute().stream()
-                .filter(attr -> DocumentAttributeCodes.DOC_DATE.getCode().equals((attr.getAttributeCode())))
-                .findFirst()
-                .map(attr -> (LocalDateTime) attr.getAttributeValue())
-                .orElse(null);
-    }
-
-    private Integer getDepartmentNumber(DocumentCard documentCard) {
-        return documentCard.getVariableAttribute().stream()
-                .filter(attr -> DocumentAttributeCodes.DOC_ACCOUNT.getCode().equals(attr.getAttributeCode()))
-                .findFirst()
-                .map(attr -> Integer.parseInt(attr.getAttributeValue().toString()))
-                .orElse(null);
-    }
-
-    private String getSourceSystemCode(DocumentCard documentCard) {
-        return documentCard.getVariableAttribute().stream()
-                .filter(attr -> DocumentAttributeCodes.DOC_SOURCE_SYSTEM.getCode().equals((attr.getAttributeCode())))
-                .findFirst()
-                .map(attr -> attr.getAttributeValue().toString())
-                .orElse(null);
     }
 }

@@ -1,10 +1,10 @@
-package ru.vlad.vlad_data_receiver.saver;
+package ru.vlad.vlad_data_receiver.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import ru.vlad.vlad_data_receiver.entity.DocumentEntity;
-import ru.vlad.vlad_data_receiver.exceptions.StorageException;
+import ru.vlad.vlad_data_receiver.repository.entity.DocumentEntity;
+import ru.vlad.vlad_data_receiver.exceptions.FileSavingException;
 import ru.vlad.vlad_data_receiver.parser.documents.Document;
 
 import java.io.IOException;
@@ -20,38 +20,36 @@ import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @Component
-public class BundleSaver {
+public class ArchiveProcessingService {
     @Value("${app.storage.base-path}")
     private String basePath;
     @Value("${app.storage.date-format}")
     private String datePattern;
-    @Value("${app.storage.archive-format}")
-    private String archiveFormat;
+
+    private static final String ARCHIVE_FORMAT = "zip";
 
     public void process(Long savedBundleId, List<DocumentEntity> savedDocuments, List<Document> allDocumentsFromRequest,
                         String docCategory, LocalDate documentOperationalDayDate) {
         String currentDate = documentOperationalDayDate.format(DateTimeFormatter.ofPattern(datePattern));
         Path storagePath = Paths.get(basePath, currentDate, docCategory);
 
-        String zipFileName = savedBundleId + archiveFormat;
+        String zipFileName = String.format("%d.%s", savedBundleId, ARCHIVE_FORMAT);
         Path zipPath = storagePath.resolve(zipFileName);
-        try {
+
+        try (OutputStream outputStream = Files.newOutputStream(zipPath);
+             ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
+
             createDirectories(storagePath);
+            log.info("Создан архив: {}", zipFileName);
 
-            try (OutputStream outputStream = Files.newOutputStream(zipPath);
-                 ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
-                log.info("Создан архив: {}", zipFileName);
-
-                for (int i = 0; i < savedDocuments.size() && i < allDocumentsFromRequest.size(); i++) {
-                    addFileToArchive(zipOutputStream, savedDocuments.get(i), allDocumentsFromRequest.get(i));
-                }
-
-                zipOutputStream.finish();
-
-                log.info("Архив {} сохранён по пути: {}", zipFileName, zipPath);
+            for (int i = 0; i < allDocumentsFromRequest.size(); i++) {
+                addFileToArchive(zipOutputStream, savedDocuments.get(i), allDocumentsFromRequest.get(i));
             }
+
+            zipOutputStream.finish();
+            log.info("Архив {} сохранён по пути: {}", zipFileName, zipPath);
         } catch (IOException e) {
-            throw new StorageException("Не удалось создать ZIP-архив: " + e.getMessage(), e);
+            throw new FileSavingException("Не удалось создать ZIP-архив: " + e.getMessage(), e);
         }
     }
 

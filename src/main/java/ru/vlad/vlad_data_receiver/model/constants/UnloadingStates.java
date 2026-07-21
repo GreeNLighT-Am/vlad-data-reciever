@@ -6,9 +6,9 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum UnloadingStates {
-    UNLOADING_ERROR(-1L),
-    NEW_UNLOADING(1L),
-    UNLOADING_SAVED(2L);
+    UNLOADING_ERROR(-1),
+    NEW_UNLOADING(1),
+    UNLOADING_SAVED(2);
 
-    private final Long stateId;
+    private final int stateId;
 }

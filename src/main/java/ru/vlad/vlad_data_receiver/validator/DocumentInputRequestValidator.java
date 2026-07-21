@@ -49,61 +49,6 @@ public class DocumentInputRequestValidator {
     );
     private static final String ERROR_MESSAGE = "Ошибка валидации";
 
-    private void processValidationError(String message, String id) {
-        if (id == null || id.isBlank()) {
-            log.error("{}: {} Для текущего запроса в БД не создана выгрузка со статусом -1 т.к. ID пуст или не передан", ERROR_MESSAGE, message);
-        } else {
-            int inserted = unloadingCrudService.setUnloadingStateId(id, UnloadingStates.UNLOADING_ERROR);
-            if (inserted > 0) {
-                log.error("{}: {}. Для запроса с ID={} в БД создана выгрузка со статусом -1", ERROR_MESSAGE, message, id);
-            } else {
-                log.error("{}: {}. Для запроса с ID={} в БД не создана выгрузка со статусом -1 т.к. выгрузка с таким ID уже существует", ERROR_MESSAGE, message, id);
-            }
-        }
-        throw new ValidationException(ERROR_MESSAGE);
-    }
-
-    private void validateNotNull(Object object, String attributeCode, String id) {
-        if (object == null) {
-            processValidationError(String.format("Атрибут %s не передан или передан некорректный формат", attributeCode), id);
-        }
-    }
-
-    private void validateIsPositive(int value, String attributeCode, String id) {
-        if (value <= 0) {
-            processValidationError(String.format("Атрибут %s не передан или передано некорректное значение", attributeCode), id);
-        }
-    }
-
-    private void nullOrBlankAttributeValidation(String attributeValue, String attribute, String id) {
-        if (attributeValue == null) {
-            processValidationError(String.format("Атрибут %s не передан", attribute), id);
-        } else if (attributeValue.isBlank()) {
-            processValidationError(String.format("В атрибут %s передано пустое значение", attribute), id);
-        }
-    }
-
-    private void nullOrBlankWithSeqNFormatValidation(String format, String tag, String attribute, int seqN, String id) {
-        if (format == null) {
-            processValidationError(String.format("В документе №%d в тэг %s не передан атрибут %s", seqN, tag, attribute), id);
-        } else if (format.isBlank()) {
-            processValidationError(String.format("В документе №%d в тэге %s в атрибут %s не передано значение", seqN, tag, attribute), id);
-        }
-    }
-
-    private String nullOrBlankObjectValidationAndToString(Object object, int seqN, String attributeCode, String id) {
-        if (object == null) {
-            processValidationError(String.format("В документе №%d не передано значение атрибута \"%s\"", seqN, attributeCode), id);
-        }
-
-        String objectStr = object.toString();
-        if (objectStr.isBlank()) {
-            processValidationError(String.format("В документе №%d передано пустое значение атрибута %s", seqN, attributeCode), id);
-        }
-
-        return objectStr;
-    }
-
     public void validate(DocumentInputRequest documentInputRequest) {
         String id = documentInputRequest.getID();
 
@@ -381,5 +326,60 @@ public class DocumentInputRequestValidator {
         if (!SignDataFormats.isValid(signDataFormat)) {
             processValidationError(String.format("В документе №%d в тэге %s в атрибут %s передано невалидное значение", seqN, tag, attribute), id);
         }
+    }
+
+    private void processValidationError(String message, String id) {
+        if (id == null || id.isBlank()) {
+            log.error("{}: {} Для текущего запроса в БД не создана выгрузка со статусом -1 т.к. ID пуст или не передан", ERROR_MESSAGE, message);
+        } else {
+            int inserted = unloadingCrudService.setUnloadingStateId(id, UnloadingStates.UNLOADING_ERROR);
+            if (inserted > 0) {
+                log.error("{}: {}. Для запроса с ID={} в БД создана выгрузка со статусом -1", ERROR_MESSAGE, message, id);
+            } else {
+                log.error("{}: {}. Для запроса с ID={} в БД не создана выгрузка со статусом -1 т.к. выгрузка с таким ID уже существует", ERROR_MESSAGE, message, id);
+            }
+        }
+        throw new ValidationException(ERROR_MESSAGE);
+    }
+
+    private void validateNotNull(Object object, String attributeCode, String id) {
+        if (object == null) {
+            processValidationError(String.format("Атрибут %s не передан или передан некорректный формат", attributeCode), id);
+        }
+    }
+
+    private void validateIsPositive(int value, String attributeCode, String id) {
+        if (value <= 0) {
+            processValidationError(String.format("Атрибут %s не передан или передано некорректное значение", attributeCode), id);
+        }
+    }
+
+    private void nullOrBlankAttributeValidation(String attributeValue, String attribute, String id) {
+        if (attributeValue == null) {
+            processValidationError(String.format("Атрибут %s не передан", attribute), id);
+        } else if (attributeValue.isBlank()) {
+            processValidationError(String.format("В атрибут %s передано пустое значение", attribute), id);
+        }
+    }
+
+    private void nullOrBlankWithSeqNFormatValidation(String format, String tag, String attribute, int seqN, String id) {
+        if (format == null) {
+            processValidationError(String.format("В документе №%d в тэг %s не передан атрибут %s", seqN, tag, attribute), id);
+        } else if (format.isBlank()) {
+            processValidationError(String.format("В документе №%d в тэге %s в атрибут %s не передано значение", seqN, tag, attribute), id);
+        }
+    }
+
+    private String nullOrBlankObjectValidationAndToString(Object object, int seqN, String attributeCode, String id) {
+        if (object == null) {
+            processValidationError(String.format("В документе №%d не передано значение атрибута \"%s\"", seqN, attributeCode), id);
+        }
+
+        String objectStr = object.toString();
+        if (objectStr.isBlank()) {
+            processValidationError(String.format("В документе №%d передано пустое значение атрибута %s", seqN, attributeCode), id);
+        }
+
+        return objectStr;
     }
 }

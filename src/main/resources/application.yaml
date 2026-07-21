@@ -16,7 +16,6 @@ spring:
 app:
   storage:
     base-path: ./storage/documents
-    archive-format: .zip
     date-format: yyyyMMdd
 
 logging:

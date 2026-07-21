@@ -6,8 +6,8 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum OperationalDayStates {
-    UNLOADING_RECEIVE_AVAILABLE(1L),
-    UNLOADING_RECEIVE_STOPPED(2L);
+    UNLOADING_RECEIVE_AVAILABLE(1),
+    UNLOADING_RECEIVE_STOPPED(2);
 
-    private final Long stateId;
+    private final int stateId;
 }

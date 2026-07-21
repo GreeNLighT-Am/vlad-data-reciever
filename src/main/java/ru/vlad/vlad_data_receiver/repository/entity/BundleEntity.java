@@ -1,4 +1,4 @@
-package ru.vlad.vlad_data_receiver.entity;
+package ru.vlad.vlad_data_receiver.repository.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,12 +15,20 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "operational_day", schema = "vlad_db")
-public class OperationalDayEntity {
+@Table(name = "bundle", schema = "vlad_db")
+public class BundleEntity {
     @Id
     private Long id;
 
-    private LocalDate date;
+    private String status;
 
-    private Long stateId;
+    private Integer documentCount;
+
+    private Integer bundleNum;
+
+    private String unloadingRequestId;
+
+    private Integer type;
+
+    private LocalDate od_p;
 }

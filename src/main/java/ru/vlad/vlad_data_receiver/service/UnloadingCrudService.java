@@ -5,7 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.entity.UnloadingEntity;
+import ru.vlad.vlad_data_receiver.repository.entity.UnloadingEntity;
+import ru.vlad.vlad_data_receiver.exceptions.UnloadingNotFoundException;
 import ru.vlad.vlad_data_receiver.model.constants.UnloadingStates;
 import ru.vlad.vlad_data_receiver.repository.UnloadingRepository;
 
@@ -23,28 +24,19 @@ public class UnloadingCrudService {
                                                 String sourceSystemCode,
                                                 LocalDateTime date,
                                                 Integer totalDocs,
-                                                Long stateId,
+                                                int stateId,
                                                 Long operationalDayId,
                                                 Integer departmentNumber,
                                                 String docCategory) {
-        log.info("Выгрузка для запроса с ID={} не найдена в кэше, создание новой", unloadingRequestId);
+        log.debug("Для запроса с ID={} выгрузка не найдена в кэше, попытка записать новую или найти существующую в БД", unloadingRequestId);
 
-        int inserted = unloadingRepository.insertIfNotExists(unloadingRequestId, sourceSystemCode, date, totalDocs, stateId, operationalDayId, departmentNumber, docCategory);
+        unloadingRepository.insertIfNotExists(unloadingRequestId, sourceSystemCode, date, totalDocs, stateId, operationalDayId, departmentNumber, docCategory);
 
-        if (inserted > 0) {
-            log.info("Новая выгрузка для запроса с ID={} успешно записана в БД", unloadingRequestId);
-            return unloadingRepository.findByUnloadingRequestId(unloadingRequestId);
-        } else {
-            log.info("Не удалось записать выгрузку для запроса с ID={} в БД, поиск в БД", unloadingRequestId);
-            UnloadingEntity unloading = unloadingRepository.findByUnloadingRequestId(unloadingRequestId);
-
-            if (unloading != null) {
-                log.info("Выгрузка для запроса с ID={} найдена в БД", unloadingRequestId);
-                return unloading;
-            } else {
-                return null;
-            }
-        }
+        return unloadingRepository.findByUnloadingRequestId(unloadingRequestId).orElseThrow(() -> {
+            String errorMessage = String.format("Для запроса с ID=%s выгрузка не найдена в кеше, а также не удалось создать новую выгрузку или получить существующую из БД", unloadingRequestId);
+            log.error(errorMessage);
+            return new UnloadingNotFoundException(errorMessage);
+        });
     }
 
     @Transactional

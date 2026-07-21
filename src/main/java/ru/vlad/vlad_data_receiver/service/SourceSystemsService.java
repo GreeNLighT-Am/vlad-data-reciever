@@ -3,7 +3,7 @@ package ru.vlad.vlad_data_receiver.service;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.vlad.vlad_data_receiver.entity.SourceSystemsEntity;
+import ru.vlad.vlad_data_receiver.repository.entity.SourceSystemsEntity;
 import ru.vlad.vlad_data_receiver.repository.SourceSystemsRepository;
 
 import java.util.HashMap;

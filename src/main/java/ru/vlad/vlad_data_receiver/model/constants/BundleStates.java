@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 public enum BundleStates {
     NEW_BUNDLE("NEW_BUNDLE"),
     SAVING_METADATA_ERROR("SAVING_METADATA_ERROR"),
-    SAVING_FILER_ERROR("SAVING_FILER_ERROR"),
+    SAVING_FILE_ERROR("SAVING_FILER_ERROR"),
     BUNDLE_SAVED("BUNDLE_SAVED");
 
     private final String status;

@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.entity.OperationalDayEntity;
+import ru.vlad.vlad_data_receiver.repository.entity.OperationalDayEntity;
 
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -19,10 +19,8 @@ public class OperationalDayService {
 
     @Transactional
     public void insertOperDays() {
-        LocalDate firstDayOfNextMonth = LocalDate.now()
-                .with(TemporalAdjusters.firstDayOfNextMonth());
-        LocalDate lastDayOfNextMonth = firstDayOfNextMonth
-                .with(TemporalAdjusters.lastDayOfMonth());
+        LocalDate firstDayOfNextMonth = LocalDate.now().with(TemporalAdjusters.firstDayOfNextMonth());
+        LocalDate lastDayOfNextMonth = firstDayOfNextMonth.with(TemporalAdjusters.lastDayOfMonth());
 
         int totalDaysInNextMonth = lastDayOfNextMonth.getDayOfMonth();
         int existingDaysCount = operationalDayCrudService.countByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
@@ -53,7 +51,7 @@ public class OperationalDayService {
         while (!loopDate.isAfter(lastDayOfNextMonth)) {
             OperationalDayEntity operationalDay = OperationalDayEntity.builder()
                     .date(loopDate)
-                    .stateId(1L)
+                    .stateId(1)
                     .build();
             daysToInsert.add(operationalDay);
             loopDate = loopDate.plusDays(1);
