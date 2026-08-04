@@ -19,8 +19,6 @@ import java.time.LocalDate;
 public class OperationalDayEntity {
     @Id
     private Long id;
-
     private LocalDate date;
-
     private int stateId;
 }

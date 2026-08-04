@@ -19,20 +19,12 @@ import java.time.LocalDateTime;
 public class UnloadingEntity {
     @Id
     private Long id;
-
     private String unloadingRequestId;
-
     private String sourceSystemCode;
-
     private LocalDateTime date;
-
     private Integer totalDocs;
-
     private int stateId;
-
     private Long operationalDayId;
-
     private Integer departmentNumber;
-
     private String docCategory;
 }

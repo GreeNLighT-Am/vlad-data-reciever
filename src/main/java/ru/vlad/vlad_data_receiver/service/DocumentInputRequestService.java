@@ -2,7 +2,6 @@ package ru.vlad.vlad_data_receiver.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 import ru.vlad.vlad_data_receiver.parser.XmlParserService;
 import ru.vlad.vlad_data_receiver.parser.documents.DocumentInputRequest;
 import ru.vlad.vlad_data_receiver.validator.DocumentInputRequestValidator;

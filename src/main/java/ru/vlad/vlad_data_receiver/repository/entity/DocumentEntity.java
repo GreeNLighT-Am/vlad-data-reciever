@@ -21,28 +21,16 @@ import java.time.LocalDateTime;
 public class DocumentEntity {
     @Id
     private Long id;
-
     String doctypeCode;
-
     private String number;
-
     private String format;
-
     private Long bundleId;
-
     private LocalDateTime timestamp;
-
     private Integer departmentCode;
-
     private BigDecimal docSum;
-
     private String sign1;
-
     private String sign2;
-
     private String sign3;
-
     private String unloadingRequestId;
-
     private LocalDate od_p;
 }

@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.vlad.vlad_data_receiver.exceptions.ValidationException;
-import ru.vlad.vlad_data_receiver.model.constants.DocumentAttributeCodes;
-import ru.vlad.vlad_data_receiver.model.constants.ContentFormats;
-import ru.vlad.vlad_data_receiver.model.constants.OdDocTypes;
-import ru.vlad.vlad_data_receiver.model.constants.SignDataFormats;
-import ru.vlad.vlad_data_receiver.model.constants.UnloadingStates;
+import ru.vlad.vlad_data_receiver.model.constants.ContentFormat;
+import ru.vlad.vlad_data_receiver.model.constants.DocumentAttributeCode;
+import ru.vlad.vlad_data_receiver.model.constants.OdDocType;
+import ru.vlad.vlad_data_receiver.model.constants.SignDataFormat;
+import ru.vlad.vlad_data_receiver.model.constants.UnloadingState;
 import ru.vlad.vlad_data_receiver.parser.documents.Content;
 import ru.vlad.vlad_data_receiver.parser.documents.Document;
 import ru.vlad.vlad_data_receiver.parser.documents.DocumentAttribute;
@@ -71,7 +71,7 @@ public class DocumentInputRequestValidator {
         String attributeName = "odDocType";
         nullOrBlankAttributeValidation(odDocType, attributeName, id);
 
-        if (!OdDocTypes.isValid(odDocType)) {
+        if (!OdDocType.isValid(odDocType)) {
             processValidationError(String.format("В атрибут %s передано некорректное значение", attributeName), id);
         }
     }
@@ -116,7 +116,7 @@ public class DocumentInputRequestValidator {
             processValidationError(String.format("В документе №%d, в тэг DocumentCard не передан ни один тэг VariableAttribute", seqN), id);
         }
 
-        Set<String> requiredAttributes = DocumentAttributeCodes.getRequiredCodes();
+        Set<String> requiredAttributes = DocumentAttributeCode.getRequiredCodes();
         Set<String> foundAttributes = new HashSet<>();
 
         for (DocumentAttribute attr : attributesList) {
@@ -131,7 +131,7 @@ public class DocumentInputRequestValidator {
 
             foundAttributes.add(attrCodeStr);
 
-            DocumentAttributeCodes attrCode = DocumentAttributeCodes.fromString(attrCodeStr);
+            DocumentAttributeCode attrCode = DocumentAttributeCode.fromString(attrCodeStr);
             if (attrCode == null) {
                 continue;
             }
@@ -139,18 +139,18 @@ public class DocumentInputRequestValidator {
             switch (attrCode) {
                 case DOC_TYPE -> validateDocType(attrValue, seqN, id);
                 case DOC_NUMBER ->
-                        nullOrBlankObjectValidationAndToString(attrValue, seqN, DocumentAttributeCodes.DOC_NUMBER.getCode(), id);
+                        nullOrBlankObjectValidationAndToString(attrValue, seqN, DocumentAttributeCode.DOC_NUMBER.getCode(), id);
                 case DOC_DATE ->
-                        validateByDateTimeFormatter(attrValue, seqN, DocumentAttributeCodes.DOC_DATE.getCode(), DATE_FORMATTER, id);
+                        validateByDateTimeFormatter(attrValue, seqN, DocumentAttributeCode.DOC_DATE.getCode(), DATE_FORMATTER, id);
                 case DOC_ACCOUNT -> validateDocAccount(attrValue, seqN, id);
                 case DOC_SOURCE_SYSTEM -> validateDocSourceSystem(attrValue, seqN, id);
                 case DOC_TIME_STAMP ->
-                        validateByDateTimeFormatter(attrValue, seqN, DocumentAttributeCodes.DOC_TIME_STAMP.getCode(), TIMESTAMP_FORMATTER, id);
+                        validateByDateTimeFormatter(attrValue, seqN, DocumentAttributeCode.DOC_TIME_STAMP.getCode(), TIMESTAMP_FORMATTER, id);
                 case DOC_STATUS -> validateDocStatus(attrValue, seqN, id);
                 case DOC_SUM -> validateDocSum(attrValue, seqN, id);
                 case DOC_SKO_SYMBOL -> validateDocSKOSymbol(attrValue, seqN, id);
-                case DOC_SIGN_1 -> validateDocSigns(attrValue, seqN, DocumentAttributeCodes.DOC_SIGN_1.getCode(), id);
-                case DOC_SIGN_2 -> validateDocSigns(attrValue, seqN, DocumentAttributeCodes.DOC_SIGN_2.getCode(), id);
+                case DOC_SIGN_1 -> validateDocSigns(attrValue, seqN, DocumentAttributeCode.DOC_SIGN_1.getCode(), id);
+                case DOC_SIGN_2 -> validateDocSigns(attrValue, seqN, DocumentAttributeCode.DOC_SIGN_2.getCode(), id);
             }
         }
 
@@ -164,7 +164,7 @@ public class DocumentInputRequestValidator {
     }
 
     private void validateDocType(Object docType, int seqN, String id) {
-        String attributeCode = DocumentAttributeCodes.DOC_TYPE.getCode();
+        String attributeCode = DocumentAttributeCode.DOC_TYPE.getCode();
         String docTypeSrt = nullOrBlankObjectValidationAndToString(docType, seqN, attributeCode, id);
 
         if (!doctypesService.isDoctypesValid(docTypeSrt)) {
@@ -187,7 +187,7 @@ public class DocumentInputRequestValidator {
     }
 
     private void validateDocAccount(Object docAccount, int seqN, String id) {
-        String attributeCode = DocumentAttributeCodes.DOC_ACCOUNT.getCode();
+        String attributeCode = DocumentAttributeCode.DOC_ACCOUNT.getCode();
         String docAccountStr = nullOrBlankObjectValidationAndToString(docAccount, seqN, attributeCode, id);
 
         try {
@@ -201,7 +201,7 @@ public class DocumentInputRequestValidator {
     }
 
     private void validateDocSourceSystem(Object docSourceSystem, int seqN, String id) {
-        String attributeCode = DocumentAttributeCodes.DOC_SOURCE_SYSTEM.getCode();
+        String attributeCode = DocumentAttributeCode.DOC_SOURCE_SYSTEM.getCode();
         String docSourceSystemStr = nullOrBlankObjectValidationAndToString(docSourceSystem, seqN, attributeCode, id);
 
         if (!sourceSystemsService.isSourceSystemValid(docSourceSystemStr)) {
@@ -210,7 +210,7 @@ public class DocumentInputRequestValidator {
     }
 
     private void validateDocSum(Object docSum, int seqN, String id) {
-        String attributeCode = DocumentAttributeCodes.DOC_SUM.getCode();
+        String attributeCode = DocumentAttributeCode.DOC_SUM.getCode();
         String docSumStr = nullOrBlankObjectValidationAndToString(docSum, seqN, attributeCode, id);
 
         try {
@@ -224,7 +224,7 @@ public class DocumentInputRequestValidator {
     }
 
     private void validateDocSKOSymbol(Object docSKOSymbol, int seqN, String id) {
-        String attributeCode = DocumentAttributeCodes.DOC_SKO_SYMBOL.getCode();
+        String attributeCode = DocumentAttributeCode.DOC_SKO_SYMBOL.getCode();
         String docSKOSymbolStr = nullOrBlankObjectValidationAndToString(docSKOSymbol, seqN, attributeCode, id);
         int docSKOSymbolInt = parsingInt(docSKOSymbolStr, seqN, attributeCode, id);
 
@@ -234,7 +234,7 @@ public class DocumentInputRequestValidator {
     }
 
     private void validateDocStatus(Object docStatus, int seqN, String id) {
-        String attributeCode = DocumentAttributeCodes.DOC_STATUS.getCode();
+        String attributeCode = DocumentAttributeCode.DOC_STATUS.getCode();
         String docStatusStr = nullOrBlankObjectValidationAndToString(docStatus, seqN, attributeCode, id);
         int docStatusInt = parsingInt(docStatusStr, seqN, attributeCode, id);
 
@@ -286,7 +286,7 @@ public class DocumentInputRequestValidator {
 
         nullOrBlankWithSeqNFormatValidation(contentFormat, tag, attribute, seqN, id);
 
-        if (!ContentFormats.isValid(contentFormat)) {
+        if (!ContentFormat.isValid(contentFormat)) {
             processValidationError(String.format("В документе №%d в тэге %s в атрибут %s передано некорректное значение", seqN, tag, attribute), id);
         }
     }
@@ -323,7 +323,7 @@ public class DocumentInputRequestValidator {
 
         nullOrBlankWithSeqNFormatValidation(signDataFormat, tag, attribute, seqN, id);
 
-        if (!SignDataFormats.isValid(signDataFormat)) {
+        if (!SignDataFormat.isValid(signDataFormat)) {
             processValidationError(String.format("В документе №%d в тэге %s в атрибут %s передано невалидное значение", seqN, tag, attribute), id);
         }
     }
@@ -332,7 +332,7 @@ public class DocumentInputRequestValidator {
         if (id == null || id.isBlank()) {
             log.error("{}: {} Для текущего запроса в БД не создана выгрузка со статусом -1 т.к. ID пуст или не передан", ERROR_MESSAGE, message);
         } else {
-            int inserted = unloadingCrudService.setUnloadingStateId(id, UnloadingStates.UNLOADING_ERROR);
+            int inserted = unloadingCrudService.setUnloadingStateId(id, UnloadingState.UNLOADING_ERROR);
             if (inserted > 0) {
                 log.error("{}: {}. Для запроса с ID={} в БД создана выгрузка со статусом -1", ERROR_MESSAGE, message, id);
             } else {

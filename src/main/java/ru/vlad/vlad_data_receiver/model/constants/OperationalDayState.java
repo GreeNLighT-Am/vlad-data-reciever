@@ -5,10 +5,9 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum UnloadingStates {
-    UNLOADING_ERROR(-1),
-    NEW_UNLOADING(1),
-    UNLOADING_SAVED(2);
+public enum OperationalDayState {
+    UNLOADING_RECEIVE_AVAILABLE(1),
+    UNLOADING_RECEIVE_STOPPED(2);
 
     private final int stateId;
 }

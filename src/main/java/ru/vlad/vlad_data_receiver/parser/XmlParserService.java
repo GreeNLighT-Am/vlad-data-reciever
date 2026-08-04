@@ -38,18 +38,18 @@ public class XmlParserService {
 
             DocumentInputRequest document = (DocumentInputRequest) unmarshaller.unmarshal(saxSource);
 
-//            log.debug("""
-//                            Успешно разобран Document_Input_Request
-//                            ID: {}
-//                            TimeStamp: {}
-//                            blockNum: {}
-//                            totalDocs: {}
-//                            dataSet: {}
-//                            odDocType: {}
-//                            Documents count: {}""",
-//                    document.getID(), document.getTimeStamp(), document.getBlockNum(),
-//                    document.getTotalDocs(), document.getDataSet(), document.getOdDocType(),
-//                    document.getDocument().size());
+            log.debug("""
+                            Успешно разобран Document_Input_Request
+                            ID: {}
+                            TimeStamp: {}
+                            blockNum: {}
+                            totalDocs: {}
+                            dataSet: {}
+                            odDocType: {}
+                            Documents count: {}""",
+                    document.getID(), document.getTimeStamp(), document.getBlockNum(),
+                    document.getTotalDocs(), document.getDataSet(), document.getOdDocType(),
+                    document.getDocument().size());
 
             return document;
         } catch (SAXException | JAXBException | NumberFormatException e) {

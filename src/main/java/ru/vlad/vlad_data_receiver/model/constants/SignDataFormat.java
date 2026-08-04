@@ -5,15 +5,15 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum SignDataFormats {
+public enum SignDataFormat {
     XML("xml"),
     TXT("txt");
 
     private final String format;
 
     public static boolean isValid(String format) {
-        for (SignDataFormats signDataFormats : values()) {
-            if (signDataFormats.format.equalsIgnoreCase(format)) {
+        for (SignDataFormat signDataFormat : values()) {
+            if (signDataFormat.format.equalsIgnoreCase(format)) {
                 return true;
             }
         }

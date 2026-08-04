@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum ContentFormats {
+public enum ContentFormat {
     TXT("txt"),
     TIF("tif"),
     JPEG("jpeg"),
@@ -21,8 +21,8 @@ public enum ContentFormats {
     private final String value;
 
     public static boolean isValid(String format) {
-        for (ContentFormats contentFormats : values()) {
-            if (contentFormats.value.equalsIgnoreCase(format)) {
+        for (ContentFormat contentFormat : values()) {
+            if (contentFormat.value.equalsIgnoreCase(format)) {
                 return true;
             }
         }

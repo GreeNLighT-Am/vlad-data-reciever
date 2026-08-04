@@ -6,19 +6,20 @@ import org.springframework.data.relational.core.conversion.DbActionExecutionExce
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.vlad.vlad_data_receiver.exceptions.BundleProcessingException;
+import ru.vlad.vlad_data_receiver.exceptions.FileSavingException;
+import ru.vlad.vlad_data_receiver.mapper.DocumentMapper;
+import ru.vlad.vlad_data_receiver.mapper.UnloadingMapper;
+import ru.vlad.vlad_data_receiver.model.constants.BundleState;
+import ru.vlad.vlad_data_receiver.model.constants.OdDocType;
+import ru.vlad.vlad_data_receiver.model.constants.OperationalDayState;
+import ru.vlad.vlad_data_receiver.model.constants.UnloadingState;
+import ru.vlad.vlad_data_receiver.parser.documents.Document;
+import ru.vlad.vlad_data_receiver.parser.documents.DocumentCard;
+import ru.vlad.vlad_data_receiver.parser.documents.DocumentInputRequest;
 import ru.vlad.vlad_data_receiver.repository.entity.BundleEntity;
 import ru.vlad.vlad_data_receiver.repository.entity.DocumentEntity;
 import ru.vlad.vlad_data_receiver.repository.entity.OperationalDayEntity;
 import ru.vlad.vlad_data_receiver.repository.entity.UnloadingEntity;
-import ru.vlad.vlad_data_receiver.exceptions.FileSavingException;
-import ru.vlad.vlad_data_receiver.mapper.DocumentMapper;
-import ru.vlad.vlad_data_receiver.model.constants.OdDocTypes;
-import ru.vlad.vlad_data_receiver.model.constants.OperationalDayStates;
-import ru.vlad.vlad_data_receiver.model.constants.UnloadingStates;
-import ru.vlad.vlad_data_receiver.model.constants.BundleStates;
-import ru.vlad.vlad_data_receiver.parser.documents.Document;
-import ru.vlad.vlad_data_receiver.parser.documents.DocumentCard;
-import ru.vlad.vlad_data_receiver.parser.documents.DocumentInputRequest;
 import ru.vlad.vlad_data_receiver.util.DocumentAttributeExtractor;
 
 import java.time.LocalDate;
@@ -36,7 +37,7 @@ public class BundleProcessingService {
     private final UnloadingCrudService unloadingCrudService;
     private final OperationalDayCrudService operationalDayCrudService;
     private final DocumentMapper documentMapper;
-    private static final String ERROR_MESSAGE = "Ошибка обработки бандла";
+    private final UnloadingMapper unloadingMapper;
 
     @Transactional
     public void processBundle(DocumentInputRequest documentInputRequest) {
@@ -45,35 +46,102 @@ public class BundleProcessingService {
         DocumentCard firstDocCard = allDocumentsFromRequest.get(0).getDocumentCard();
         LocalDate operationalDayDate = DocumentAttributeExtractor.getOperationalDayDate(firstDocCard);
 
-        OperationalDayEntity operationalDay = operationalDayCrudService.findByDate(operationalDayDate, unloadingRequestId);
-        if (operationalDay.getStateId() != OperationalDayStates.UNLOADING_RECEIVE_AVAILABLE.getStateId()) {
-            processBundleProcessingError(String.format("Для запроса с ID=%s операционный день закрыт для приёма новых выгрузок, прекращаем обработку бандла", unloadingRequestId));
+        OperationalDayEntity operationalDay = operationalDayCrudService.findByDate(operationalDayDate);
+        if (operationalDay.getStateId() != OperationalDayState.UNLOADING_RECEIVE_AVAILABLE.getStateId()) {
+            processBundleProcessingError(
+                    "Для запроса с ID=%s операционный день закрыт для приёма новых выгрузок".formatted(unloadingRequestId)
+            );
         }
 
         LocalDateTime documentTimeStamp = documentInputRequest.getTimeStamp();
         String odDocType = documentInputRequest.getOdDocType();
         int totalDocs = documentInputRequest.getTotalDocs();
 
-        processUnloading(unloadingRequestId, firstDocCard, documentTimeStamp, totalDocs, operationalDay.getId(), odDocType);
+        UnloadingEntity unloading = unloadingMapper.toUnloadingEntity(
+                unloadingRequestId,
+                documentTimeStamp,
+                totalDocs,
+                operationalDay.getId(),
+                odDocType,
+                firstDocCard
+        );
 
-        Long savedBundleId = createNewBundle(documentInputRequest, allDocumentsFromRequest.size(), unloadingRequestId, odDocType, operationalDayDate);
+        unloading = processUnloading(unloading);
+
+        Long savedBundleId = createNewBundle(
+                documentInputRequest,
+                allDocumentsFromRequest.size(),
+                unloadingRequestId,
+                odDocType,
+                operationalDayDate
+        );
 
         log.debug("Начало обработки бандла с ID={} для выгрузки с ID={}", savedBundleId, unloadingRequestId);
         try {
-            int documentsSaved = saveDocuments(allDocumentsFromRequest, documentTimeStamp, savedBundleId, unloadingRequestId, operationalDayDate, odDocType);
+            int documentsSaved = saveDocuments(
+                    allDocumentsFromRequest,
+                    documentTimeStamp,
+                    savedBundleId,
+                    unloadingRequestId,
+                    operationalDayDate,
+                    odDocType
+            );
 
-            bundleCrudService.updateStatus(savedBundleId, BundleStates.BUNDLE_SAVED.getStatus());
-            log.info("Бандл с ID={} для выгрузки с ID={} успешно сохранён. Статус бандла переведён в BUNDLE_SAVED", savedBundleId, unloadingRequestId);
+            bundleCrudService.updateStatusById(savedBundleId, BundleState.BUNDLE_SAVED);
+            log.info("Бандл с ID={} для выгрузки с ID={} успешно сохранён", savedBundleId, unloadingRequestId);
 
-            setUnloadingStatus(unloadingRequestId, documentsSaved, totalDocs);
+            setUnloadingStatus(unloading, documentsSaved, totalDocs);
         } catch (DbActionExecutionException e) {
-            handleBundleSavingError(savedBundleId, unloadingRequestId, e, BundleStates.SAVING_METADATA_ERROR);
+            handleBundleSavingError(savedBundleId, unloadingRequestId, e, BundleState.SAVING_METADATA_ERROR);
         } catch (FileSavingException e) {
-            handleBundleSavingError(savedBundleId, unloadingRequestId, e, BundleStates.SAVING_FILE_ERROR);
+            handleBundleSavingError(savedBundleId, unloadingRequestId, e, BundleState.SAVING_FILE_ERROR);
         }
     }
 
-    private int saveDocuments(List<Document> allDocumentsFromRequest, LocalDateTime documentTimeStamp, Long savedBundleId, String unloadingRequestId, LocalDate operationalDayDate, String odDocType) {
+    private UnloadingEntity processUnloading(UnloadingEntity newUnloading) {
+        String unloadingRequestId = newUnloading.getUnloadingRequestId();
+        UnloadingEntity unloading = unloadingCrudService.getOrCreateUnloading(newUnloading);
+
+        int unloadingStateId = unloading.getStateId();
+        if (unloadingStateId < 0) {
+            processBundleProcessingError(
+                    "У выгрузки для запроса с ID=%s статус меньше 0".formatted(unloadingRequestId)
+            );
+        } else if (unloadingStateId == UnloadingState.UNLOADING_SAVED.getStateId()) {
+            processBundleProcessingError(
+                    "Выгрузка с ID=%s уже была успешно сохранена ранее".formatted(unloadingRequestId)
+            );
+        }
+        return unloading;
+    }
+
+    private Long createNewBundle(
+            DocumentInputRequest documentInputRequest,
+            int documentCount,
+            String unloadingRequestId,
+            String odDocType,
+            LocalDate documentOperationalDayDate
+    ) {
+        BundleEntity bundleEntity = BundleEntity.builder()
+                .status(BundleState.NEW_BUNDLE)
+                .documentCount(documentCount)
+                .bundleNum(documentInputRequest.getBlockNum())
+                .unloadingRequestId(unloadingRequestId)
+                .type(OdDocType.getType(odDocType))
+                .od_p(documentOperationalDayDate)
+                .build();
+
+        return bundleCrudService.save(bundleEntity).getId();
+    }
+
+    private int saveDocuments(
+            List<Document> allDocumentsFromRequest,
+            LocalDateTime documentTimeStamp,
+            Long savedBundleId,
+            String unloadingRequestId,
+            LocalDate operationalDayDate,
+            String odDocType
+    ) {
         List<DocumentEntity> savedDocuments = allDocumentsFromRequest.stream()
                 .map(doc -> documentMapper.toDocumentEntity(
                         doc,
@@ -92,62 +160,32 @@ public class BundleProcessingService {
         return documentsSaved;
     }
 
-    private void processBundleProcessingError(String errorMessage) {
-        log.error(errorMessage);
-        throw new BundleProcessingException(ERROR_MESSAGE);
-    }
+    private void setUnloadingStatus(UnloadingEntity unloading, int documentsSaved, int totalDocs) {
+        String unloadingRequestId = unloading.getUnloadingRequestId();
+        int docSavedInDb = bundleCrudService.getCompletedUnloadingsDocumentsCount(unloadingRequestId);
 
-    private void handleBundleSavingError(Long bundleId, String unloadingRequestId, Exception e, BundleStates errorState) {
-        bundleCrudService.updateStatus(bundleId, errorState.getStatus());
-        processBundleProcessingError(String.format(
-                "Ошибка сохранения бандла для выгрузки с ID=%s: %s. Статус бандла переведён в %s",
-                unloadingRequestId, e.getMessage(), errorState.name()
-        ));
-    }
-
-    private Long createNewBundle(DocumentInputRequest documentInputRequest, int documentCount, String unloadingRequestId, String odDocType, LocalDate documentOperationalDayDate) {
-        BundleEntity bundleEntity = BundleEntity.builder()
-                .status(BundleStates.NEW_BUNDLE.getStatus())
-                .documentCount(documentCount)
-                .bundleNum(documentInputRequest.getBlockNum())
-                .unloadingRequestId(unloadingRequestId)
-                .type(OdDocTypes.getType(odDocType))
-                .od_p(documentOperationalDayDate)
-                .build();
-
-        return bundleCrudService.save(bundleEntity).getId();
-    }
-
-    private void processUnloading(String unloadingRequestId, DocumentCard documentCardOfFirstDocumentFromRequest, LocalDateTime documentTimeStamp, int totalDocs, Long operationalDayId, String odDocType) {
-        UnloadingEntity unloading = unloadingCrudService.getOrCreateUnloading(
-                unloadingRequestId,
-                DocumentAttributeExtractor.getSourceSystemCode(documentCardOfFirstDocumentFromRequest),
-                documentTimeStamp,
-                totalDocs,
-                UnloadingStates.NEW_UNLOADING.getStateId(),
-                operationalDayId,
-                DocumentAttributeExtractor.getDepartmentNumber(documentCardOfFirstDocumentFromRequest),
-                odDocType
-        );
-
-        int unloadingStateId = unloading.getStateId();
-        if (unloadingStateId < 0) {
-            processBundleProcessingError(String.format("У выгрузки для запроса с ID=%s статус меньше 0, прекращаем обработку бандла", unloadingRequestId));
-        } else if (unloadingStateId == UnloadingStates.UNLOADING_SAVED.getStateId()) {
-            processBundleProcessingError(String.format("Выгрузка с ID=%s уже была успешно сохранена ранее, прекращаем обработку бандла", unloadingRequestId));
-        }
-    }
-
-    private void setUnloadingStatus(String unloadingRequestId, int documentsSaved, int totalDocs) {
-        int docSavedInDb = bundleCrudService.getTotalCompletedDocumentsCountByUnloadingRequestId(unloadingRequestId);
         if (documentsSaved == totalDocs || docSavedInDb == totalDocs) {
-            unloadingCrudService.updateUnloadingStateId(unloadingRequestId, UnloadingStates.UNLOADING_SAVED);
-            log.info("Получены все документы для выгрузки с ID={}. Статус выгрузки переведён в UNLOADING_SAVED", unloadingRequestId);
+            unloadingCrudService.updateUnloadingStateId(unloading, UnloadingState.UNLOADING_SAVED);
+            log.info("Получены все документы для выгрузки с ID={}", unloadingRequestId);
         } else if (documentsSaved > totalDocs || docSavedInDb > totalDocs) {
-            unloadingCrudService.updateUnloadingStateId(unloadingRequestId, UnloadingStates.UNLOADING_ERROR);
-            processBundleProcessingError(String.format("Для выгрузки с ID=%s передано больше документов чем ожидается. Статус выгрузки переведён в UNLOADING_ERROR", unloadingRequestId));
+            unloadingCrudService.updateUnloadingStateId(unloading, UnloadingState.UNLOADING_ERROR);
+            processBundleProcessingError(
+                    "Для выгрузки с ID=%s передано больше документов чем ожидается".formatted(unloadingRequestId)
+            );
         } else {
             log.info("Получена часть документов для выгрузки с ID={}", unloadingRequestId);
         }
+    }
+
+    private void handleBundleSavingError(Long bundleId, String unloadingRequestId, Exception e, BundleState errorState) {
+        bundleCrudService.updateStatusById(bundleId, errorState);
+        processBundleProcessingError(
+                "Ошибка сохранения бандла для выгрузки с ID=%s: %s".formatted(unloadingRequestId, e.getMessage())
+        );
+    }
+
+    private void processBundleProcessingError(String errorMessage) {
+        log.error(errorMessage);
+        throw new BundleProcessingException("Ошибка обработки бандла");
     }
 }

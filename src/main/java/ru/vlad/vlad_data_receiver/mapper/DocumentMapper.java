@@ -4,15 +4,14 @@ import org.mapstruct.InjectionStrategy;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
-import ru.vlad.vlad_data_receiver.repository.entity.DocumentEntity;
-import ru.vlad.vlad_data_receiver.model.constants.DocumentAttributeCodes;
+import ru.vlad.vlad_data_receiver.model.constants.DocumentAttributeCode;
 import ru.vlad.vlad_data_receiver.parser.documents.Document;
+import ru.vlad.vlad_data_receiver.repository.entity.DocumentEntity;
+import ru.vlad.vlad_data_receiver.util.DocumentAttributeExtractor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
-import ru.vlad.vlad_data_receiver.util.DocumentAttributeExtractor;
 
 @Mapper(componentModel = "spring", injectionStrategy = InjectionStrategy.CONSTRUCTOR)
 public interface DocumentMapper {
@@ -42,36 +41,36 @@ public interface DocumentMapper {
 
     @Named("toDocTypeCode")
     static String toDocTypeCode(Document document) {
-        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCodes.DOC_TYPE);
+        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCode.DOC_TYPE);
     }
 
     @Named("toNumber")
     static String toNumber(Document document) {
-        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCodes.DOC_NUMBER);
+        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCode.DOC_NUMBER);
     }
 
     @Named("toDepartmentCode")
     static Integer toDepartmentCode(Document document) {
-        return DocumentAttributeExtractor.getAttributeAsInteger(document, DocumentAttributeCodes.DOC_ACCOUNT);
+        return DocumentAttributeExtractor.getAttributeAsInteger(document, DocumentAttributeCode.DOC_ACCOUNT);
     }
 
     @Named("toDocSum")
     static BigDecimal toDocSum(Document document) {
-        return DocumentAttributeExtractor.getAttributeAsBigDecimal(document, DocumentAttributeCodes.DOC_SUM);
+        return DocumentAttributeExtractor.getAttributeAsBigDecimal(document, DocumentAttributeCode.DOC_SUM);
     }
 
     @Named("toSign1")
     static String toSign1(Document document) {
-        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCodes.DOC_SIGN_1);
+        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCode.DOC_SIGN_1);
     }
 
     @Named("toSign2")
     static String toSign2(Document document) {
-        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCodes.DOC_SIGN_2);
+        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCode.DOC_SIGN_2);
     }
 
     @Named("toSign3")
     static String toSign3(Document document) {
-        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCodes.DOC_SIGN_3);
+        return DocumentAttributeExtractor.getAttributeValue(document, DocumentAttributeCode.DOC_SIGN_3);
     }
 }

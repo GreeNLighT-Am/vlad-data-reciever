@@ -1,8 +1,8 @@
 package ru.vlad.vlad_data_receiver.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,7 +24,7 @@ public class DocumentInputRequestController {
             HttpServletRequest servletRequest) {
 
         log.info("Получен запрос от: {}", servletRequest.getRemoteAddr());
-//        log.debug("Тело запроса: {}", xmlRequest);
+        log.debug("Тело запроса: {}", xmlRequest);
 
         String documentId = documentInputRequestService.processRequest(xmlRequest);
 

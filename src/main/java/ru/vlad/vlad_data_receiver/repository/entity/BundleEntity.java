@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
+import ru.vlad.vlad_data_receiver.model.constants.BundleState;
 
 import java.time.LocalDate;
 
@@ -19,16 +20,10 @@ import java.time.LocalDate;
 public class BundleEntity {
     @Id
     private Long id;
-
-    private String status;
-
+    private BundleState status;
     private Integer documentCount;
-
     private Integer bundleNum;
-
     private String unloadingRequestId;
-
     private Integer type;
-
     private LocalDate od_p;
 }

@@ -17,8 +17,6 @@ import org.springframework.data.relational.core.mapping.Table;
 public class SourceSystemsEntity {
     @Id
     private String code;
-
     private String name;
-
     private Boolean isManual;
 }

@@ -3,8 +3,8 @@ package ru.vlad.vlad_data_receiver.service;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.vlad.vlad_data_receiver.repository.entity.DoctypesEntity;
 import ru.vlad.vlad_data_receiver.repository.DoctypesRepository;
+import ru.vlad.vlad_data_receiver.repository.entity.DoctypesEntity;
 
 import java.util.HashMap;
 import java.util.Map;

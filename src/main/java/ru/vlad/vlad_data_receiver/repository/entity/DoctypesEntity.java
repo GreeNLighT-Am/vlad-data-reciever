@@ -19,10 +19,7 @@ import java.math.BigDecimal;
 public class DoctypesEntity {
     @Id
     private String code;
-
     private String name;
-
     private Long groupId;
-
     private BigDecimal lifeTime;
 }

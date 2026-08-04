@@ -3,9 +3,9 @@ package ru.vlad.vlad_data_receiver.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import ru.vlad.vlad_data_receiver.repository.entity.DocumentEntity;
 import ru.vlad.vlad_data_receiver.exceptions.FileSavingException;
 import ru.vlad.vlad_data_receiver.parser.documents.Document;
+import ru.vlad.vlad_data_receiver.repository.entity.DocumentEntity;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -39,7 +39,7 @@ public class ArchiveProcessingService {
         try (OutputStream outputStream = Files.newOutputStream(zipPath);
              ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
 
-            createDirectories(storagePath);
+            createDirectoryIfNotExist(storagePath);
             log.info("Создан архив: {}", zipFileName);
 
             for (int i = 0; i < allDocumentsFromRequest.size(); i++) {
@@ -54,8 +54,8 @@ public class ArchiveProcessingService {
     }
 
     private void addFileToArchive(ZipOutputStream zipOutputStream, DocumentEntity savedDocument, Document documentFromRequest) throws IOException {
-        String extension = savedDocument.getFormat().toLowerCase();
-        String fileName = String.format("%d.%s", savedDocument.getId(), extension);
+        String format = savedDocument.getFormat().toLowerCase();
+        String fileName = String.format("%d.%s", savedDocument.getId(), format);
 
         ZipEntry zipEntry = new ZipEntry(fileName);
         zipOutputStream.putNextEntry(zipEntry);
@@ -65,7 +65,7 @@ public class ArchiveProcessingService {
         log.debug("В архив добавлен файл: {}", fileName);
     }
 
-    private void createDirectories(Path path) throws IOException {
+    private void createDirectoryIfNotExist(Path path) throws IOException {
         if (!Files.exists(path)) {
             Files.createDirectories(path);
             log.debug("Создана директория: {}", path);

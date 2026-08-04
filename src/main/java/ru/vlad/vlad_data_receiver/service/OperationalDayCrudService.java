@@ -5,9 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.repository.entity.OperationalDayEntity;
 import ru.vlad.vlad_data_receiver.exceptions.OperationalDayNotFoundException;
 import ru.vlad.vlad_data_receiver.repository.OperationalDayRepository;
+import ru.vlad.vlad_data_receiver.repository.entity.OperationalDayEntity;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -37,10 +37,10 @@ public class OperationalDayCrudService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "operationalDayCache", key = "#date", unless = "#result == null")
-    public OperationalDayEntity findByDate(LocalDate date, String unloadingRequestId) {
+    public OperationalDayEntity findByDate(LocalDate date) {
         log.debug("Операционный день на {} не найден в кэше, делаем запрос к БД", date);
         return operationalDayRepository.findByDate(date).orElseThrow(() -> {
-            String errorMessage = String.format("Для выгрузки с ID=%s не найден операционный день", unloadingRequestId);
+            String errorMessage = String.format("Не найден операционный день на %s", date);
             log.error(errorMessage);
             return new OperationalDayNotFoundException(errorMessage);
         });

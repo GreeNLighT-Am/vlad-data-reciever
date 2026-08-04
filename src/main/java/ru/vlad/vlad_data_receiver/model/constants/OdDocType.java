@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum OdDocTypes {
+public enum OdDocType {
     KKD("ККД", 1),
     BDD("БДД", 2),
     FO("ФО", 3);
@@ -14,8 +14,8 @@ public enum OdDocTypes {
     private final int type;
 
     public static boolean isValid(String type) {
-        for (OdDocTypes odDocTypes : values()) {
-            if (odDocTypes.value.equalsIgnoreCase(type)) {
+        for (OdDocType odDocType : values()) {
+            if (odDocType.value.equalsIgnoreCase(type)) {
                 return true;
             }
         }
@@ -23,9 +23,9 @@ public enum OdDocTypes {
     }
 
     public static int getType(String value) {
-        for (OdDocTypes odDocTypes : values()) {
-            if (odDocTypes.value.equals(value)) {
-                return odDocTypes.getType();
+        for (OdDocType odDocType : values()) {
+            if (odDocType.value.equals(value)) {
+                return odDocType.getType();
             }
         }
         throw new IllegalArgumentException("Unknown odDocType: " + value);

@@ -19,12 +19,8 @@ import java.time.LocalDateTime;
 public class DepartmentsEntity {
     @Id
     private Integer code;
-
     private String name;
-
     private LocalDateTime createDate;
-
     private LocalDateTime modifyDate;
-
     private Boolean isActive;
 }

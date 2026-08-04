@@ -4,8 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.repository.entity.BundleEntity;
+import ru.vlad.vlad_data_receiver.model.constants.BundleState;
 import ru.vlad.vlad_data_receiver.repository.BundleRepository;
+import ru.vlad.vlad_data_receiver.repository.entity.BundleEntity;
 
 @Slf4j
 @Service
@@ -19,12 +20,12 @@ public class BundleCrudService {
     }
 
     @Transactional
-    public void updateStatus(Long id, String status) {
-        bundleRepository.updateStatus(id, status);
+    public void updateStatusById(Long id, BundleState status) {
+        bundleRepository.updateBundleStatusById(id, status);
     }
 
     @Transactional
-    public int getTotalCompletedDocumentsCountByUnloadingRequestId(String unloadingRequestId) {
-        return bundleRepository.getTotalCompletedDocumentsCountByUnloadingRequestId(unloadingRequestId);
+    public int getCompletedUnloadingsDocumentsCount(String unloadingRequestId) {
+        return bundleRepository.getCompletedUnloadingsDocumentsCount(unloadingRequestId);
     }
 }
