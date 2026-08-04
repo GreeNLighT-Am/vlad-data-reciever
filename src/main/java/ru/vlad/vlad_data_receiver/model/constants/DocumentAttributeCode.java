@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 @Getter
 @RequiredArgsConstructor
-public enum DocumentAttributeCodes {
+public enum DocumentAttributeCode {
     DOC_TYPE("DocType", true),
     DOC_NUMBER("DocNumber", true),
     DOC_DATE("DocDate", true),
@@ -20,15 +20,17 @@ public enum DocumentAttributeCodes {
     DOC_SUM("DocSum", false),
     DOC_SKO_SYMBOL("DocSKOSymbol", false),
     DOC_SIGN_1("DocSign1", false),
-    DOC_SIGN_2("DocSign2", false);
+    DOC_SIGN_2("DocSign2", false),
+    DOC_SIGN_3("DocSign3", false);
+
 
     private final String code;
     private final boolean required;
 
-    public static DocumentAttributeCodes fromString(String code) {
-        for (DocumentAttributeCodes documentAttributeCodes : values()) {
-            if (documentAttributeCodes.getCode().equals(code)) {
-                return documentAttributeCodes;
+    public static DocumentAttributeCode fromString(String code) {
+        for (DocumentAttributeCode documentAttributeCode : values()) {
+            if (documentAttributeCode.getCode().equals(code)) {
+                return documentAttributeCode;
             }
         }
         return null;
@@ -36,8 +38,8 @@ public enum DocumentAttributeCodes {
 
     public static Set<String> getRequiredCodes() {
         return Arrays.stream(values())
-                .filter(DocumentAttributeCodes::isRequired)
-                .map(DocumentAttributeCodes::getCode)
+                .filter(DocumentAttributeCode::isRequired)
+                .map(DocumentAttributeCode::getCode)
                 .collect(Collectors.toUnmodifiableSet());
     }
 }

@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vlad.vlad_data_receiver.entity.OperationalDayEntity;
+import ru.vlad.vlad_data_receiver.repository.entity.OperationalDayEntity;
 
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
@@ -15,18 +15,15 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class OperationalDayService {
-
-    private final OperationalDayCrudService crudService;
+    private final OperationalDayCrudService operationalDayCrudService;
 
     @Transactional
     public void insertOperDays() {
-        LocalDate firstDayOfNextMonth = LocalDate.now()
-                .with(TemporalAdjusters.firstDayOfNextMonth());
-        LocalDate lastDayOfNextMonth = firstDayOfNextMonth
-                .with(TemporalAdjusters.lastDayOfMonth());
+        LocalDate firstDayOfNextMonth = LocalDate.now().with(TemporalAdjusters.firstDayOfNextMonth());
+        LocalDate lastDayOfNextMonth = firstDayOfNextMonth.with(TemporalAdjusters.lastDayOfMonth());
 
         int totalDaysInNextMonth = lastDayOfNextMonth.getDayOfMonth();
-        int existingDaysCount = crudService.countByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
+        int existingDaysCount = operationalDayCrudService.countByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
 
         try {
             if (existingDaysCount == 0) {
@@ -38,7 +35,7 @@ public class OperationalDayService {
                 log.warn("Опердни на следующий месяц есть, но не на весь месяц (найдено {} из {}). Перезапускаем заполнение...",
                         existingDaysCount, totalDaysInNextMonth);
 
-                crudService.deleteByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
+                operationalDayCrudService.deleteByDateBetween(firstDayOfNextMonth, lastDayOfNextMonth);
 
                 fillOperationalDays(firstDayOfNextMonth, lastDayOfNextMonth);
             }
@@ -54,13 +51,13 @@ public class OperationalDayService {
         while (!loopDate.isAfter(lastDayOfNextMonth)) {
             OperationalDayEntity operationalDay = OperationalDayEntity.builder()
                     .date(loopDate)
-                    .stateId(1L)
+                    .stateId(1)
                     .build();
             daysToInsert.add(operationalDay);
             loopDate = loopDate.plusDays(1);
         }
 
-        crudService.saveAll(daysToInsert);
+        operationalDayCrudService.saveAll(daysToInsert);
         log.info("Успешно заполнены опердни на весь следующий месяц с {} по {}.", firstDayOfNextMonth, lastDayOfNextMonth);
     }
 }

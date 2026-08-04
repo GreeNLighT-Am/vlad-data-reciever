@@ -13,6 +13,7 @@ import org.xml.sax.helpers.XMLReaderFactory;
 import ru.vlad.vlad_data_receiver.exceptions.XmlParsingException;
 import ru.vlad.vlad_data_receiver.parser.documents.DocumentInputRequest;
 import ru.vlad.vlad_data_receiver.parser.filter.NamespaceFilter;
+import ru.vlad.vlad_data_receiver.service.UnloadingCrudService;
 
 import javax.xml.transform.sax.SAXSource;
 import java.io.StringReader;
@@ -21,8 +22,9 @@ import java.io.StringReader;
 @Service
 @RequiredArgsConstructor
 public class XmlParserService {
-
     private final JAXBContext jaxbContext;
+    private final UnloadingCrudService unloadingCrudService;
+    private static final String ERROR_MESSAGE = "Ошибка при парсинге XML";
 
     public DocumentInputRequest parseXml(String xml) {
         try {
